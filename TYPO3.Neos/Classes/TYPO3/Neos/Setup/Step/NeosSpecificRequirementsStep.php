@@ -208,7 +208,6 @@ class NeosSpecificRequirementsStep extends \TYPO3\Setup\Step\AbstractStep
                         'type' => 'error',
                         'message' => 'You have too less Memory for your CLI! With ' . $webMemoryLimit . ' you will encounter problems. Raise the Memory Limit to at least ' . $minMemoryLimit . '. More than ' . $optMemoryLimit . ' would be even better.',
                     );
-                    $status['cli']['alert'] = $cliMemoryLimit;
                 } else if ($this->getPhpIniValueInBytes($cliMemoryLimit) >= $this->getPhpIniValueInBytes($minMemoryLimit) && $this->getPhpIniValueInBytes($cliMemoryLimit) < $this->getPhpIniValueInBytes($optMemoryLimit)) {
                     $status['cli'] = array(
                         'type' => 'info',
