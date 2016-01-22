@@ -62,6 +62,26 @@ class NeosSpecificRequirementsStep extends \TYPO3\Setup\Step\AbstractStep
         $page1 = $formDefinition->createPage('page1');
         $page1->setRenderingOption('header', 'Neos requirements check');
 
+        $memoryLimitStatus = $this->checkMemoryLimit();
+        if ( count($memoryLimitStatus)>0 ) {
+
+            $memoryLimitSection = $page1->createElement('memoryLimitSection', 'TYPO3.Form:Section');
+            $memoryLimitSection->setLabel('Memory Limit');
+
+            $formElement = $memoryLimitSection->createElement('memoryLimitInfo', 'TYPO3.Form:StaticText');
+            $formElement->setProperty('text', 'At least during development you should raise the memory limit to about 250 MB in your php.ini file.');
+            $formElement->setProperty('elementClassAttribute', 'alert alert-primary');
+
+            $i = 0;
+            foreach ($memoryLimitStatus as $memoryLimitStatusScope => $memoryLimitStatusResult) {
+                $formElement = $memoryLimitSection->createElement('memoryLimitResult' . $i, 'TYPO3.Form:StaticText');
+                $formElement->setProperty('text', $memoryLimitStatusResult['message']);
+                $formElement->setProperty('elementClassAttribute', 'alert alert-' . $memoryLimitStatusResult['type']);
+                $i++;
+            }
+
+        }
+
         $imageSection = $page1->createElement('connectionSection', 'TYPO3.Form:Section');
         $imageSection->setLabel('Image Manipulation');
 
@@ -137,4 +157,85 @@ class NeosSpecificRequirementsStep extends \TYPO3\Setup\Step\AbstractStep
 
         $this->configurationManager->flushConfigurationCache();
     }
+
+    /**
+     * @return array
+     */
+    protected function checkMemoryLimit() {
+        try {
+            $status = array();
+
+            $minMemoryLimit = '128M';
+            $optMemoryLimit = '256M';
+
+            $webMemoryLimit = ini_get('memory_limit');
+            $cliMemoryLimit = NULL;
+
+            $output = array();
+            $return = array();
+            exec('php -r \'echo ini_get("memory_limit");\'', $output, $return);
+            if ($return === 0 && isset($output[0])) {
+                $cliMemoryLimit = $output[0];
+            }
+
+            if ($this->getPhpIniValueInBytes($webMemoryLimit) == $this->getPhpIniValueInBytes($cliMemoryLimit)) {
+                if ($this->getPhpIniValueInBytes($webMemoryLimit) < $this->getPhpIniValueInBytes($minMemoryLimit)) {
+                    $status['both'] = array(
+                        'type' => 'error',
+                        'message' => 'You have too less Memory! With ' . $webMemoryLimit . ' you will encounter problems. Raise the Memory Limit to at least ' . $minMemoryLimit . '. More than ' . $optMemoryLimit . ' would be even better.',
+                    );
+                } else if ($this->getPhpIniValueInBytes($webMemoryLimit) >= $this->getPhpIniValueInBytes($minMemoryLimit) && $this->getPhpIniValueInBytes($webMemoryLimit) < $this->getPhpIniValueInBytes($optMemoryLimit)) {
+                    $status['both'] = array(
+                        'type' => 'info',
+                        'message' => 'Your Memory Limit of ' . $webMemoryLimit . ' is fine. More than ' . $optMemoryLimit . ' would be even better, especially in the development context.',
+                    );
+                }
+            } else {
+                if ($this->getPhpIniValueInBytes($webMemoryLimit) < $this->getPhpIniValueInBytes($minMemoryLimit)) {
+                    $status['web'] = array(
+                        'type' => 'error',
+                        'message' => 'You have too less Memory for your Web Server! With ' . $webMemoryLimit . ' you will encounter problems. Raise the Memory Limit to at least ' . $minMemoryLimit . '. More than ' . $optMemoryLimit . ' would be even better.',
+                    );
+                } else if ($this->getPhpIniValueInBytes($webMemoryLimit) >= $this->getPhpIniValueInBytes($minMemoryLimit) && $this->getPhpIniValueInBytes($webMemoryLimit) < $this->getPhpIniValueInBytes($optMemoryLimit)) {
+                    $status['web'] = array(
+                        'type' => 'info',
+                        'message' => 'Your Memory Limit of ' . $webMemoryLimit . ' for your Web Server is fine. More than ' . $optMemoryLimit . ' would be even better, especially in the development context.',
+                    );
+                }
+
+                if ($this->getPhpIniValueInBytes($cliMemoryLimit) < $this->getPhpIniValueInBytes($minMemoryLimit)) {
+                    $status['cli'] = array(
+                        'type' => 'error',
+                        'message' => 'You have too less Memory for your CLI! With ' . $webMemoryLimit . ' you will encounter problems. Raise the Memory Limit to at least ' . $minMemoryLimit . '. More than ' . $optMemoryLimit . ' would be even better.',
+                    );
+                    $status['cli']['alert'] = $cliMemoryLimit;
+                } else if ($this->getPhpIniValueInBytes($cliMemoryLimit) >= $this->getPhpIniValueInBytes($minMemoryLimit) && $this->getPhpIniValueInBytes($cliMemoryLimit) < $this->getPhpIniValueInBytes($optMemoryLimit)) {
+                    $status['cli'] = array(
+                        'type' => 'info',
+                        'message' => 'Your Memory Limit of ' . $webMemoryLimit . ' for your CLI is fine. More than ' . $optMemoryLimit . ' would be even better, especially in the development context.',
+                    );
+                }
+            }
+        } catch (\Exception $exception) {
+            $status = array();
+        }
+
+        return $status;
+    }
+
+    /**
+     * @param string $value
+     * @return int
+     */
+    protected function getPhpIniValueInBytes($value) {
+        $value = trim($value);
+        $last = strtolower($value[strlen($value)-1]);
+        switch($last) {
+            case 'g':   $value *= 1024;
+            case 'm':   $value *= 1024;
+            case 'k':   $value *= 1024;
+        }
+        return $value;
+    }
+
 }
