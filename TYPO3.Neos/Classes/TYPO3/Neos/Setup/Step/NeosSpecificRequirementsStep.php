@@ -18,6 +18,7 @@ use TYPO3\Flow\Persistence\PersistenceManagerInterface;
 use TYPO3\Flow\Resource\ResourceManager;
 use TYPO3\Flow\Utility\Arrays;
 use TYPO3\Flow\Utility\Files;
+use TYPO3\Flow\Core\Booting\Scripts;
 
 /**
  * @Flow\Scope("singleton")
@@ -165,6 +166,8 @@ class NeosSpecificRequirementsStep extends \TYPO3\Setup\Step\AbstractStep
         try {
             $status = array();
 
+            $settings = $this->configurationManager->getConfiguration(ConfigurationManager::CONFIGURATION_TYPE_SETTINGS, 'TYPO3.Flow');
+
             $minMemoryLimit = '128M';
             $optMemoryLimit = '256M';
 
@@ -173,7 +176,9 @@ class NeosSpecificRequirementsStep extends \TYPO3\Setup\Step\AbstractStep
 
             $output = array();
             $return = array();
-            exec('php -r \'echo ini_get("memory_limit");\'', $output, $return);
+            $command = Scripts::buildPhpCommand($settings);
+            $command .= ' -r \'echo ini_get("memory_limit");\'';
+            exec($command, $output, $return);
             if ($return === 0 && isset($output[0])) {
                 $cliMemoryLimit = $output[0];
             }
@@ -206,12 +211,12 @@ class NeosSpecificRequirementsStep extends \TYPO3\Setup\Step\AbstractStep
                 if ($this->getPhpIniValueInBytes($cliMemoryLimit) < $this->getPhpIniValueInBytes($minMemoryLimit)) {
                     $status['cli'] = array(
                         'type' => 'error',
-                        'message' => 'You have too less Memory for your CLI! With ' . $webMemoryLimit . ' you will encounter problems. Raise the Memory Limit to at least ' . $minMemoryLimit . '. More than ' . $optMemoryLimit . ' would be even better.',
+                        'message' => 'You have too less Memory for your CLI! With ' . $cliMemoryLimit . ' you will encounter problems. Raise the Memory Limit to at least ' . $minMemoryLimit . '. More than ' . $optMemoryLimit . ' would be even better.',
                     );
                 } else if ($this->getPhpIniValueInBytes($cliMemoryLimit) >= $this->getPhpIniValueInBytes($minMemoryLimit) && $this->getPhpIniValueInBytes($cliMemoryLimit) < $this->getPhpIniValueInBytes($optMemoryLimit)) {
                     $status['cli'] = array(
                         'type' => 'info',
-                        'message' => 'Your Memory Limit of ' . $webMemoryLimit . ' for your CLI is fine. More than ' . $optMemoryLimit . ' would be even better, especially in the development context.',
+                        'message' => 'Your Memory Limit of ' . $cliMemoryLimit . ' for your CLI is fine. More than ' . $optMemoryLimit . ' would be even better, especially in the development context.',
                     );
                 }
             }
