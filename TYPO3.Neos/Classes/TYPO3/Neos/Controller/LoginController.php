@@ -112,7 +112,7 @@ class LoginController extends AbstractAuthenticationController
         $currentDomain = $this->domainRepository->findOneByActiveRequest();
         $currentSite = $currentDomain !== null ? $currentDomain->getSite() : $this->siteRepository->findFirstOnline();
         $this->view->assignMultiple([
-            'styles' => array_filter($this->settings['backendLoginForm']['stylesheets']),
+            'styles' => array_filter($this->settings['userInterface']['backendLoginForm']['stylesheets']),
             'username' => $username,
             'site' => $currentSite
         ]);
@@ -147,7 +147,11 @@ class LoginController extends AbstractAuthenticationController
      */
     protected function onAuthenticationFailure(AuthenticationRequiredException $exception = null)
     {
-        $this->addFlashMessage('The entered username or password was wrong', 'Wrong credentials', Message::SEVERITY_ERROR, array(), ($exception === null ? 1347016771 : $exception->getCode()));
+        if ($this->view instanceof JsonView) {
+            $this->view->assign('value', array('success' => false));
+        } else {
+            $this->addFlashMessage('The entered username or password was wrong', 'Wrong credentials', Message::SEVERITY_ERROR, array(), ($exception === null ? 1347016771 : $exception->getCode()));
+        }
     }
 
     /**

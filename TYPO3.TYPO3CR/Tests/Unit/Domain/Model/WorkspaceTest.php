@@ -13,7 +13,6 @@ namespace TYPO3\TYPO3CR\Tests\Unit\Domain\Model;
 
 use TYPO3\Flow\Tests\UnitTestCase;
 use TYPO3\TYPO3CR\Domain\Model\Workspace;
-use TYPO3\TYPO3CR\Domain\Service\NodeService;
 
 /**
  * Test case for the "Workspace" domain model
@@ -90,13 +89,13 @@ class WorkspaceTest extends UnitTestCase
     public function publishNodeReturnsIfTheTargetWorkspaceIsTheSameAsTheSourceWorkspace()
     {
         $liveWorkspace = new Workspace('live');
-        $workspace = new Workspace('some-campaign');
+        $workspace = $this->getMock('TYPO3\TYPO3CR\Domain\Model\Workspace', array('emitBeforeNodePublishing'), array('some-campaign'));
         $workspace->setBaseWorkspace($liveWorkspace);
 
         $mockNode = $this->getMockBuilder('TYPO3\TYPO3CR\Domain\Model\NodeInterface')->disableOriginalConstructor()->getMock();
         $mockNode->expects($this->any())->method('getWorkspace')->will($this->returnValue($workspace));
 
-        $mockNode->expects($this->never())->method('emitBeforeNodePublishing');
+        $workspace->expects($this->never())->method('emitBeforeNodePublishing');
 
         $workspace->publishNode($mockNode, $workspace);
     }

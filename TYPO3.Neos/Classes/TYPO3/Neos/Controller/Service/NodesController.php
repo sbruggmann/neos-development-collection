@@ -21,7 +21,6 @@ use TYPO3\Neos\Domain\Service\NodeSearchServiceInterface;
 use TYPO3\Neos\Domain\Service\SiteService;
 use TYPO3\TYPO3CR\Domain\Model\NodeInterface;
 use TYPO3\TYPO3CR\Domain\Model\NodeType;
-use TYPO3\TYPO3CR\Domain\Service\Context;
 use TYPO3\TYPO3CR\Domain\Service\NodeTypeManager;
 use TYPO3\TYPO3CR\Domain\Utility\NodePaths;
 
@@ -76,13 +75,14 @@ class NodesController extends ActionController
      * Shows a list of nodes
      *
      * @param string $searchTerm An optional search term used for filtering the list of nodes
+     * @param array $nodeIdentifiers An optional list of node identifiers
      * @param string $workspaceName Name of the workspace to search in, "live" by default
      * @param array $dimensions Optional list of dimensions and their values which should be used for querying
      * @param array $nodeTypes A list of node types the list should be filtered by
      * @param NodeInterface $contextNode a node to use as context for the search
      * @return string
      */
-    public function indexAction($searchTerm = '', $workspaceName = 'live', array $dimensions = array(), array $nodeTypes = array('TYPO3.Neos:Document'), NodeInterface $contextNode = null)
+    public function indexAction($searchTerm = '', array $nodeIdentifiers = array(), $workspaceName = 'live', array $dimensions = array(), array $nodeTypes = array('TYPO3.Neos:Document'), NodeInterface $contextNode = null)
     {
         $searchableNodeTypeNames = array();
         foreach ($nodeTypes as $nodeTypeName) {
@@ -98,7 +98,13 @@ class NodesController extends ActionController
         }
 
         $contentContext = $this->createContentContext($workspaceName, $dimensions);
-        $nodes = $this->nodeSearchService->findByProperties($searchTerm, $searchableNodeTypeNames, $contentContext, $contextNode);
+        if ($nodeIdentifiers === array()) {
+            $nodes = $this->nodeSearchService->findByProperties($searchTerm, $searchableNodeTypeNames, $contentContext, $contextNode);
+        } else {
+            $nodes = array_map(function ($identifier) use ($contentContext) {
+                return $contentContext->getNodeByIdentifier($identifier);
+            }, $nodeIdentifiers);
+        }
 
         $this->view->assign('nodes', $nodes);
     }
@@ -195,13 +201,15 @@ class NodesController extends ActionController
             // To find the node path for the given identifier, we just use the first result. This is a safe assumption at least for
             // "Document" nodes (aggregate=TRUE), because they are always moved in-sync.
             $node = reset($nodeVariants);
+            /** @var NodeInterface $node */
             if ($node->getNodeType()->isAggregate()) {
                 $pathSegmentsToSites = NodePaths::getPathDepth(SiteService::SITES_ROOT_PATH);
                 $pathSegmentsToNodeVariant = NodePaths::getPathDepth($node->getPath());
                 // Segments between the sites root "/sites" and the node variant (minimum 1)
                 $pathSegments = $pathSegmentsToNodeVariant - $pathSegmentsToSites;
                 // Nodes between (and including) the site root node and the node variant (minimum 1)
-                $nodes = $context->getNodesOnPath($context->getCurrentSiteNode()->getPath(), $node->getPath());
+                $siteNodePath = NodePaths::addNodePathSegment(SiteService::SITES_ROOT_PATH, $context->getCurrentSite()->getNodeName());
+                $nodes = $context->getNodesOnPath($siteNodePath, $node->getPath());
                 $missingNodesOnRootline = $pathSegments - count($nodes);
                 if ($missingNodesOnRootline > 0) {
                     $this->response->setHeader('X-Neos-Nodes-Missing-On-Rootline', $missingNodesOnRootline);

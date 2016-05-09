@@ -95,7 +95,7 @@ The following options are allowed:
 
   Example::
 
-    'TYPO3.NeosDemoTypo3Org:Flickr':
+    'Neos.Demo:Flickr':
       label: ${'Flickr plugin (' + q(node).property('tags') + ')'}
 
   ``generatorClass``
@@ -113,6 +113,10 @@ The following options are allowed:
     It can only be created through the user interface if ``group`` is defined and it is valid.
 
     All valid groups are given in the ``TYPO3.Neos.nodeTypes.groups`` setting
+
+  ``position``
+    Position inside the group this content element is grouped into for the 'New Content Element' dialog.
+    Small numbers are sorted on top.
 
   ``icon``
     This setting define the icon to use in the Neos UI for the node type
@@ -177,6 +181,9 @@ The following options are allowed:
 
       ``position``
         Position of the inspector group, small numbers are sorted on top
+
+      ``icon``
+        This setting define the icon to use in the Neos UI for the group
 
       ``tab``
         The tab the group belongs to. If left empty the group is added to the ``default`` tab.
@@ -319,6 +326,7 @@ Here is one of the standard Neos node types (slightly shortened)::
 	      groups:
 	        image:
 	          label: 'Image'
+	          icon: 'icon-image'
 	          position: 5
 	  properties:
 	    image:

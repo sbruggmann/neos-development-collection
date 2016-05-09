@@ -1,7 +1,7 @@
 .. _`node-migrations`:
 
-Node Migrations
-===============
+Node Migration Reference
+========================
 
 Node migrations can be used to deal with renamed node types and property names, set missing default values for
 properties, adjust content dimensions and more.
@@ -15,7 +15,6 @@ The Content Repository comes with a number of common transformations:
 - ``AddNewProperty``
 - ``ChangeNodeType``
 - ``ChangePropertyValue``
-- ``CreateNodes``
 - ``RemoveNode``
 - ``RemoveProperty``
 - ``RenameDimension``
