@@ -3,7 +3,7 @@
 Fluid ViewHelper Reference
 ==========================
 
-This reference was automatically generated from code on 2015-10-09
+This reference was automatically generated from code on 2016-06-07
 
 
 .. _`Fluid ViewHelper Reference: f:alias`:
@@ -917,6 +917,8 @@ Arguments
 * ``additionalAttributes`` (array, *optional*): Additional tag attributes. They will be added directly to the resulting HTML tag.
 
 * ``data`` (array, *optional*): Additional data-* attributes. They will each be added with a "data-" prefix.
+
+* ``required`` (boolean, *optional*): If the field is required or not
 
 * ``name`` (string, *optional*): Name of input tag
 
@@ -2457,7 +2459,7 @@ f:if
 ----
 
 This view helper implements an if/else condition.
-Check \TYPO3\Fluid\Core\Parser\SyntaxTree\ViewHelperNode::convertArgumentValue() to see how boolean arguments are evaluated
+Check \Neos\FluidAdaptor\Core\Parser\SyntaxTree\ViewHelperNode::convertArgumentValue() to see how boolean arguments are evaluated
 
 **Conditions:**
 
@@ -2951,9 +2953,9 @@ Examples
 	Header
 	<f:renderChildren arguments="{foo: 'bar'}" />
 	Footer
-	
+
 	<-- in the outer template, using the widget -->
-	
+
 	<x:widget.someWidget>
 	  Foo: {foo}
 	</x:widget.someWidget>

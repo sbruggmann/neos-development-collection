@@ -12,8 +12,8 @@ namespace TYPO3\Neos\ViewHelpers\ContentElement;
  */
 
 use TYPO3\Flow\Annotations as Flow;
-use TYPO3\Fluid\Core\ViewHelper\AbstractViewHelper;
-use TYPO3\Fluid\Core\ViewHelper\Exception as ViewHelperException;
+use Neos\FluidAdaptor\Core\ViewHelper\AbstractViewHelper;
+use Neos\FluidAdaptor\Core\ViewHelper\Exception as ViewHelperException;
 use TYPO3\Neos\Service\ContentElementWrappingService;
 use TYPO3\TYPO3CR\Domain\Model\NodeInterface;
 use TYPO3\TypoScript\TypoScriptObjects\Helpers\TypoScriptAwareViewInterface;
@@ -69,6 +69,6 @@ class WrapViewHelper extends AbstractViewHelper
         if ($node === null) {
             $node = $currentContext['node'];
         }
-        return $this->contentElementWrappingService->wrapContentObject($node, $typoScriptObject->getPath(), $this->renderChildren());
+        return $this->contentElementWrappingService->wrapContentObject($node, $this->renderChildren(), $typoScriptObject->getPath());
     }
 }

@@ -218,6 +218,13 @@ the nodes are again filtered by a check for their property ``spam`` being false.
 	comments.collection = ${q(node).is('[instanceof TYPO3.Neos:ContentCollection]') ?
 		q(node).children("[spam = false]") : q(node).children(this.getNodePath()).children("[spam = false]")}
 
+Querying for nodes of two or more different node types
+
+.. code-block:: text
+
+	elements = ${q(node).filter('[instanceof TYPO3.Neos.NodeTypes:Text],[instanceof TYPO3.Neos.NodeTypes:TextWithImage]').get()}
+
+
 Fizzle
 ======
 
@@ -280,3 +287,13 @@ For the latter the behavior is as follows: if the operand is one of the strings
 object, array, int(eger), float, double, bool(ean) or string the value is checked
 for being of the specified type. For any other strings the value is used as
 class name with the PHP instanceof operation to check if the value matches.
+
+Using Multiple Filters
+----------------------
+
+It is possible to combine multiple filters:
+
+``[foo][bar][baz]``
+  All filters have to match (AND)
+``[foo],[bar],[baz]``
+  Only one filter has to match (OR)
