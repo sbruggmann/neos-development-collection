@@ -205,8 +205,8 @@ Neos:
       # - in Production context
       enableObjectTreeCache: false
 
-      # Packages can now register with this setting to get their TypoScript in the path:
-      # resources://MyVendor.MyPackageKey/Private/TypoScript/Root.ts2
+      # Packages can now register with this setting to get their Fusion in the path:
+      # resources://MyVendor.MyPackageKey/Private/TypoScript/Root.fusion
       # included automatically.
       # The order of inclusions is set by the package loading order
       # (and thus the composer dependencies of your packages).
@@ -680,11 +680,11 @@ Neos:
     rendering:
       exceptionHandler: Neos\Fusion\Core\ExceptionHandlers\ThrowingHandler
     defaultContext:
-      Neos.Node: Neos\Neos\TypoScript\Helper\NodeHelper
-      Neos.Link: Neos\Neos\TypoScript\Helper\LinkHelper
-      Neos.Array: Neos\Neos\TypoScript\Helper\ArrayHelper
-      Neos.Rendering: Neos\Neos\TypoScript\Helper\RenderingHelper
-      Neos.Caching: Neos\Neos\TypoScript\Helper\CachingHelper
+      Neos.Node: Neos\Neos\Fusion\Helper\NodeHelper
+      Neos.Link: Neos\Neos\Fusion\Helper\LinkHelper
+      Neos.Array: Neos\Neos\Fusion\Helper\ArrayHelper
+      Neos.Rendering: Neos\Neos\Fusion\Helper\RenderingHelper
+      Neos.Caching: Neos\Neos\Fusion\Helper\CachingHelper
 
   Setup:
     stepOrder:
