@@ -115,6 +115,10 @@ class DimensionsMenuImplementation extends AbstractMenuImplementation
             }, $allDimensionPresets);
 
             if ($pinnedDimensionName === null) {
+                if ($nodeInDimensions === null) {
+                    continue;
+                }
+
                 $itemLabel = $nodeInDimensions->getLabel();
             } else {
                 $itemLabel = $targetDimensions[$pinnedDimensionName]['label'];
