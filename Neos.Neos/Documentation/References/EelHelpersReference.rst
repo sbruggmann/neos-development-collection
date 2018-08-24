@@ -3,7 +3,7 @@
 Eel Helpers Reference
 =====================
 
-This reference was automatically generated from code on 2016-06-07
+This reference was automatically generated from code on 2018-08-10
 
 
 .. _`Eel Helpers Reference: Array`:
@@ -18,7 +18,7 @@ The implementation uses the JavaScript specificiation where applicable, includin
 See https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array for a documentation and
 specification of the JavaScript implementation.
 
-Implemented in: ``TYPO3\Eel\Helper\ArrayHelper``
+Implemented in: ``Neos\Eel\Helper\ArrayHelper``
 
 Array.concat(array1, array2, array\_)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -39,6 +39,18 @@ Get the first element of an array
 * ``array`` (array) The array
 
 **Return** (mixed)
+
+Array.flip(array)
+^^^^^^^^^^^^^^^^^
+
+Exchanges all keys with their associated values in an array
+
+Note that the values of array need to be valid keys, i.e. they need to be either integer or string.
+If a value has several occurrences, the latest key will be used as its value, and all others will be lost.
+
+* ``array`` (array)
+
+**Return** (array) The array with flipped keys and values
 
 Array.indexOf(array, searchElement, fromIndex)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -130,6 +142,20 @@ Picks a random element from the array
 * ``array`` (array)
 
 **Return** (mixed) A random entry or NULL if the array is empty
+
+Array.range(start, end, step)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Create an array containing a range of elements
+
+If a step value is given, it will be used as the increment between elements in the sequence.
+step should be given as a positive number. If not specified, step will default to 1.
+
+* ``start`` (mixed) First value of the sequence.
+* ``end`` (mixed) The sequence is ended upon reaching the end value.
+* ``step`` (integer, *optional*) The increment between items, will default to 1.
+
+**Return** (array) Array of elements from start to end, inclusive.
 
 Array.reverse(array)
 ^^^^^^^^^^^^^^^^^^^^
@@ -233,7 +259,7 @@ Configuration
 
 Configuration helpers for Eel contexts
 
-Implemented in: ``TYPO3\Eel\Helper\ConfigurationHelper``
+Implemented in: ``Neos\Eel\Helper\ConfigurationHelper``
 
 Configuration.setting(settingPath)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -242,13 +268,39 @@ Return the specified settings
 
 Examples::
 
-    Configuration.setting('TYPO3.Flow.core.context') == 'Production'
+    Configuration.setting('Neos.Flow.core.context') == 'Production'
 
     Configuration.setting('Acme.Demo.speedMode') == 'light speed'
 
 * ``settingPath`` (string)
 
 **Return** (mixed)
+
+
+
+
+
+
+.. _`Eel Helpers Reference: ContentDimensions`:
+
+ContentDimensions
+-----------------
+
+
+
+Implemented in: ``Neos\Neos\Ui\Fusion\Helper\ContentDimensionsHelper``
+
+ContentDimensions.allowedPresetsByName(dimensions)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``dimensions`` (array) Dimension values indexed by dimension name
+
+**Return** (array) Allowed preset names for the given dimension combination indexed by dimension name
+
+ContentDimensions.contentDimensionsByName()
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Return** (array) Dimensions indexed by name with presets indexed by name
 
 
 
@@ -262,7 +314,7 @@ Date
 
 Date helpers for Eel contexts
 
-Implemented in: ``TYPO3\Eel\Helper\DateHelper``
+Implemented in: ``Neos\Eel\Helper\DateHelper``
 
 Date.add(date, interval)
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -302,6 +354,17 @@ See formatting options as in PHP date()
 
 * ``date`` (integer|string|\DateTime|\DateInterval)
 * ``format`` (string)
+
+**Return** (string)
+
+Date.formatCldr(date, cldrFormat, locale)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Format a date to a string with a given cldr format
+
+* ``date`` (integer|string|\DateTime)
+* ``cldrFormat`` (string) Format string in CLDR format (see http://cldr.unicode.org/translation/date-time)
+* ``locale`` (null|string, *optional*) String locale - example (de|en|ru_RU)
 
 **Return** (string)
 
@@ -400,7 +463,7 @@ Json
 
 JSON helpers for Eel contexts
 
-Implemented in: ``TYPO3\Eel\Helper\JsonHelper``
+Implemented in: ``Neos\Eel\Helper\JsonHelper``
 
 Json.parse(json, associativeArrays)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -438,7 +501,7 @@ The implementation sticks to the JavaScript specificiation including EcmaScript 
 See https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Math for a documentation and
 specification of the JavaScript implementation.
 
-Implemented in: ``TYPO3\Eel\Helper\MathHelper``
+Implemented in: ``Neos\Eel\Helper\MathHelper``
 
 Math.abs(x)
 ^^^^^^^^^^^
@@ -863,12 +926,12 @@ Neos.Caching.nodeTypeTag(nodeType)
 
 Generate an `@cache` entry tag for a node type
 A cache entry with this tag will be flushed whenever a node
-(for any variant) that is of the given node type (including inheritance)
-is updated.
+(for any variant) that is of the given node type(s)
+(including inheritance) is updated.
 
-* ``nodeType`` (NodeType)
+* ``nodeType`` (string|NodeType|string[]|NodeType[])
 
-**Return** (string)
+**Return** (string|string[])
 
 
 
@@ -932,7 +995,7 @@ Neos.Link.resolveNodeUri(uri, contextNode, controllerContext)
 Neos.Node
 ---------
 
-Eel helper for TYPO3CR Nodes
+Eel helper for ContentRepository Nodes
 
 Implemented in: ``Neos\Neos\Fusion\Helper\NodeHelper``
 
@@ -993,6 +1056,229 @@ Render a human-readable description for the passed $dimensions
 
 
 
+.. _`Eel Helpers Reference: Neos.Ui.Activation`:
+
+Neos.Ui.Activation
+------------------
+
+
+
+Implemented in: ``Neos\Neos\Ui\Fusion\Helper\ActivationHelper``
+
+Neos.Ui.Activation.isLegacyBackendEnabled()
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+
+
+
+.. _`Eel Helpers Reference: Neos.Ui.Modules`:
+
+Neos.Ui.Modules
+---------------
+
+
+
+Implemented in: ``Neos\Neos\Ui\Fusion\Helper\ModulesHelper``
+
+Neos.Ui.Modules.isAllowed(modulePath)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Checks whether the current user has access to a module
+
+* ``modulePath`` (string)
+
+**Return** (boolean)
+
+Neos.Ui.Modules.isAvailable(moduleName)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Checks, whether a module is available to the current user
+
+* ``moduleName`` (string)
+
+**Return** (boolean)
+
+Neos.Ui.Modules.isEnabled(modulePath)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Checks whether a module is enabled
+
+* ``modulePath`` (string)
+
+**Return** (boolean)
+
+
+
+
+
+
+.. _`Eel Helpers Reference: Neos.Ui.PositionalArraySorter`:
+
+Neos.Ui.PositionalArraySorter
+-----------------------------
+
+
+
+Implemented in: ``Neos\Neos\Ui\Fusion\Helper\PositionalArraySorterHelper``
+
+Neos.Ui.PositionalArraySorter.sort(array, positionPath)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``array`` (array)
+* ``positionPath`` (string, *optional*)
+
+**Return** (array)
+
+
+
+
+
+
+.. _`Eel Helpers Reference: Neos.Ui.Sites`:
+
+Neos.Ui.Sites
+-------------
+
+
+
+Implemented in: ``Neos\Neos\Ui\Fusion\Helper\SitesHelper``
+
+Neos.Ui.Sites.isActive(siteNode)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+
+
+
+.. _`Eel Helpers Reference: Neos.Ui.StaticResources`:
+
+Neos.Ui.StaticResources
+-----------------------
+
+
+
+Implemented in: ``Neos\Neos\Ui\Fusion\Helper\StaticResourcesHelper``
+
+Neos.Ui.StaticResources.compiledResourcePackage()
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+
+
+
+.. _`Eel Helpers Reference: Neos.Ui.Workspace`:
+
+Neos.Ui.Workspace
+-----------------
+
+
+
+Implemented in: ``Neos\Neos\Ui\Fusion\Helper\WorkspaceHelper``
+
+Neos.Ui.Workspace.getAllowedTargetWorkspaces()
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Neos.Ui.Workspace.getPersonalWorkspace()
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Neos.Ui.Workspace.getPublishableNodeInfo(workspace)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``workspace`` (Workspace)
+
+**Return** (array)
+
+
+
+
+
+
+.. _`Eel Helpers Reference: NodeInfo`:
+
+NodeInfo
+--------
+
+
+
+Implemented in: ``Neos\Neos\Ui\Fusion\Helper\NodeInfoHelper``
+
+NodeInfo.createRedirectToNode(controllerContext, node)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``controllerContext`` (ControllerContext)
+* ``node`` (NodeInterface, *optional*)
+
+**Return** (string)
+
+NodeInfo.defaultNodesForBackend(site, documentNode, controllerContext)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``site`` (NodeInterface)
+* ``documentNode`` (NodeInterface)
+* ``controllerContext`` (ControllerContext)
+
+**Return** (array)
+
+NodeInfo.renderDocumentNodeAndChildContent(documentNode, controllerContext)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``documentNode`` (NodeInterface)
+* ``controllerContext`` (ControllerContext)
+
+**Return** (array)
+
+NodeInfo.renderNodeWithMinimalPropertiesAndChildrenInformation(node, controllerContext, nodeTypeFilterOverride)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``node`` (NodeInterface)
+* ``controllerContext`` (ControllerContext|null, *optional*)
+* ``nodeTypeFilterOverride`` (string, *optional*)
+
+**Return** (array)
+
+NodeInfo.renderNodeWithPropertiesAndChildrenInformation(node, controllerContext, nodeTypeFilterOverride)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``node`` (NodeInterface)
+* ``controllerContext`` (ControllerContext|null, *optional*)
+* ``nodeTypeFilterOverride`` (string, *optional*)
+
+**Return** (array)
+
+NodeInfo.renderNodes(nodes, controllerContext, omitMostPropertiesForTreeState)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``nodes`` (array)
+* ``controllerContext`` (ControllerContext)
+* ``omitMostPropertiesForTreeState`` (bool, *optional*)
+
+**Return** (array)
+
+NodeInfo.renderNodesWithParents(nodes, controllerContext)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``nodes`` (array)
+* ``controllerContext`` (ControllerContext)
+
+**Return** (array)
+
+NodeInfo.uri(node, controllerContext)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``node`` (NodeInterface)
+* ``controllerContext`` (ControllerContext)
+
+**Return** (string)
+
+
+
+
+
+
 .. _`Eel Helpers Reference: Security`:
 
 Security
@@ -1000,14 +1286,14 @@ Security
 
 Helper for security related information
 
-Implemented in: ``TYPO3\Eel\Helper\SecurityHelper``
+Implemented in: ``Neos\Eel\Helper\SecurityHelper``
 
 Security.getAccount()
 ^^^^^^^^^^^^^^^^^^^^^
 
 Get the account of the first authenticated token.
 
-**Return** (\TYPO3\Flow\Security\Account|NULL)
+**Return** (Account|NULL)
 
 Security.hasRole(roleIdentifier)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1031,7 +1317,7 @@ String
 
 String helpers for Eel contexts
 
-Implemented in: ``TYPO3\Eel\Helper\StringHelper``
+Implemented in: ``Neos\Eel\Helper\StringHelper``
 
 String.charAt(string, index)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1200,8 +1486,28 @@ String.pregMatch(string, pattern)
 
 Match a string with a regular expression (PREG style)
 
-* ``string`` (string)
-* ``pattern`` (string)
+Example::
+
+    String.pregMatch("For more information, see Chapter 3.4.5.1", "/(chapter \d+(\.\d)*)/i")
+      == ['Chapter 3.4.5.1', 'Chapter 3.4.5.1', '.1']
+
+* ``string`` (string) The input string
+* ``pattern`` (string) A PREG pattern
+
+**Return** (array) The matches as array or NULL if not matched
+
+String.pregMatchAll(string, pattern)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Perform a global regular expression match (PREG style)
+
+Example::
+
+    String.pregMatchAll("<hr id="icon-one" /><hr id="icon-two" />", '/id="icon-(.+?)"/')
+      == [['id="icon-one"', 'id="icon-two"'],['one','two']]
+
+* ``string`` (string) The input string
+* ``pattern`` (string) A PREG pattern
 
 **Return** (array) The matches as array or NULL if not matched
 
@@ -1210,11 +1516,32 @@ String.pregReplace(string, pattern, replace)
 
 Replace occurrences of a search string inside the string using regular expression matching (PREG style)
 
-* ``string`` (string)
-* ``pattern`` (string)
-* ``replace`` (string)
+Examples::
+
+    String.pregReplace("Some.String with sp:cial characters", "/[[:^alnum:]]/", "-") == "Some-String-with-sp-cial-characters"
+    String.pregReplace("2016-08-31", "/([0-9]+)-([0-9]+)-([0-9]+)/", "$3.$2.$1") == "31.08.2016"
+
+* ``string`` (string) The input string
+* ``pattern`` (string) A PREG pattern
+* ``replace`` (string) A replacement string, can contain references to capture groups with "\\n" or "$n
 
 **Return** (string) The string with all occurrences replaced
+
+String.pregSplit(string, pattern, limit)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Split a string by a separator using regular expression matching (PREG style)
+
+Examples::
+
+    String.pregSplit("foo bar   baz", "/\s+/") == ['foo', 'bar', 'baz']
+    String.pregSplit("first second third", "/\s+/", 2) == ['first', 'second third']
+
+* ``string`` (string) The input string
+* ``pattern`` (string) A PREG pattern
+* ``limit`` (integer, *optional*) The maximum amount of items to return, in contrast to split() this will return all remaining characters in the last item (see example)
+
+**Return** (array) An array of the splitted parts, excluding the matched pattern
 
 String.rawUrlDecode(string)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1239,11 +1566,15 @@ String.replace(string, search, replace)
 
 Replace occurrences of a search string inside the string
 
+Example::
+
+    String.replace("canal", "ana", "oo") == "cool"
+
 Note: this method does not perform regular expression matching, @see pregReplace().
 
-* ``string`` (string)
-* ``search`` (string)
-* ``replace`` (string)
+* ``string`` (string) The input string
+* ``search`` (string) A search string
+* ``replace`` (string) A replacement string
 
 **Return** (string) The string with all occurrences replaced
 
@@ -1252,11 +1583,16 @@ String.split(string, separator, limit)
 
 Split a string by a separator
 
+Example::
+
+    String.split("My hovercraft is full of eels", " ") == ['My', 'hovercraft', 'is', 'full', 'of', 'eels']
+    String.split("Foo", "", 2) == ['F', 'o']
+
 Node: This implementation follows JavaScript semantics without support of regular expressions.
 
 * ``string`` (string) The string to split
 * ``separator`` (string, *optional*) The separator where the string should be splitted
-* ``limit`` (integer, *optional*) The maximum amount of items to split
+* ``limit`` (integer, *optional*) The maximum amount of items to split (exceeding items will be discarded)
 
 **Return** (array) An array of the splitted parts, excluding the separators
 
@@ -1277,8 +1613,8 @@ Examples::
 
 **Return** (boolean)
 
-String.stripTags(string)
-^^^^^^^^^^^^^^^^^^^^^^^^
+String.stripTags(string, allowableTags)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Strip all HTML tags from the given string
 
@@ -1289,6 +1625,7 @@ Example::
 This is a wrapper for the strip_tags() PHP function.
 
 * ``string`` (string) The string to strip
+* ``allowableTags`` (string, *optional*) Specify tags which should not be stripped
 
 **Return** (string) The string with tags stripped
 
@@ -1395,6 +1732,17 @@ Trim whitespace at the beginning and end of a string
 
 **Return** (string) The trimmed string
 
+String.wordCount(unicodeString)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Return the count of words for a given string. Remove marks & digits and
+flatten all kind of whitespaces (tabs, new lines and multiple spaces)
+For example this helper can be utilized to calculate the reading time of an article.
+
+* ``unicodeString`` (string) The input string
+
+**Return** (integer) Number of words
+
 
 
 
@@ -1407,7 +1755,7 @@ Translation
 
 Translation helpers for Eel contexts
 
-Implemented in: ``TYPO3\Flow\I18n\EelHelper\TranslationHelper``
+Implemented in: ``Neos\Flow\I18n\EelHelper\TranslationHelper``
 
 Translation.id(id)
 ^^^^^^^^^^^^^^^^^^
@@ -1462,7 +1810,7 @@ Type
 
 Type helper for Eel contexts
 
-Implemented in: ``TYPO3\Eel\Helper\TypeHelper``
+Implemented in: ``Neos\Eel\Helper\TypeHelper``
 
 Type.className(variable)
 ^^^^^^^^^^^^^^^^^^^^^^^^

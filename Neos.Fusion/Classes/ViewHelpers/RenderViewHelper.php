@@ -12,17 +12,17 @@ namespace Neos\Fusion\ViewHelpers;
  */
 
 use Neos\FluidAdaptor\Core\ViewHelper\AbstractViewHelper;
-use Neos\Fusion\TypoScriptObjects\AbstractTypoScriptObject;
+use Neos\Fusion\FusionObjects\AbstractFusionObject;
 use Neos\Fusion\View\FusionView;
 
 /**
  * Render a Fusion object with a relative Fusion path, optionally
- * pushing new variables onto the TypoScript context.
+ * pushing new variables onto the Fusion context.
  *
  * = Examples =
  *
  * <code title="Simple">
- * TypoScript:
+ * Fusion:
  * some.given {
  * 	path = Neos.Fusion:Template
  * 	…
@@ -51,7 +51,7 @@ class RenderViewHelper extends AbstractViewHelper
     /**
      * @var FusionView
      */
-    protected $typoScriptView;
+    protected $fusionView;
 
     /**
      * Initialize the arguments.
@@ -60,7 +60,8 @@ class RenderViewHelper extends AbstractViewHelper
      */
     public function initializeArguments()
     {
-        $this->registerArgument('typoScriptFilePathPattern', 'string', 'Resource pattern to load Fusion from. Defaults to: resource://@package/Private/TypoScript/', false);
+        $this->registerArgument('typoScriptFilePathPattern', 'string', 'Resource pattern to load Fusion from. Defaults to: resource://@package/Private/Fusion/. Deprecated, use fusionFilePathPattern instead.', false);
+        $this->registerArgument('fusionFilePathPattern', 'string', 'Resource pattern to load Fusion from. Defaults to: resource://@package/Private/Fusion/', false);
     }
 
     /**
@@ -68,11 +69,12 @@ class RenderViewHelper extends AbstractViewHelper
      *
      * @param string $path Relative Fusion path to be rendered
      * @param array $context Additional context variables to be set.
-     * @param string $typoScriptPackageKey The key of the package to load Fusion from, if not from the current context.
+     * @param string $typoScriptPackageKey The key of the package to load Fusion from, if not from the current context. Deprecated, use fusionFilePathPattern instead.
+     * @param string $fusionPackageKey The key of the package to load Fusion from, if not from the current context.
      * @return string
      * @throws \InvalidArgumentException
      */
-    public function render($path, array $context = null, $typoScriptPackageKey = null)
+    public function render($path, array $context = null, $typoScriptPackageKey = null, $fusionPackageKey = null)
     {
         if (strpos($path, '/') === 0 || strpos($path, '.') === 0) {
             throw new \InvalidArgumentException('When calling the Fusion render view helper only relative paths are allowed.', 1368740480);
@@ -83,32 +85,32 @@ class RenderViewHelper extends AbstractViewHelper
 
         $slashSeparatedPath = str_replace('.', '/', $path);
 
-        if ($typoScriptPackageKey === null) {
-            /** @var $typoScriptObject AbstractTypoScriptObject */
-            $typoScriptObject = $this->viewHelperVariableContainer->getView()->getTypoScriptObject();
+        if ($typoScriptPackageKey === null && $fusionPackageKey === null) {
+            /** @var $fusionObject AbstractFusionObject */
+            $fusionObject = $this->viewHelperVariableContainer->getView()->getFusionObject();
             if ($context !== null) {
-                $currentContext = $typoScriptObject->getTsRuntime()->getCurrentContext();
+                $currentContext = $fusionObject->getRuntime()->getCurrentContext();
                 foreach ($context as $key => $value) {
                     $currentContext[$key] = $value;
                 }
-                $typoScriptObject->getTsRuntime()->pushContextArray($currentContext);
+                $fusionObject->getRuntime()->pushContextArray($currentContext);
             }
-            $absolutePath = $typoScriptObject->getPath() . '/' . $slashSeparatedPath;
+            $absolutePath = $fusionObject->getPath() . '/' . $slashSeparatedPath;
 
-            $output = $typoScriptObject->getTsRuntime()->render($absolutePath);
+            $output = $fusionObject->getRuntime()->render($absolutePath);
 
             if ($context !== null) {
-                $typoScriptObject->getTsRuntime()->popContext();
+                $fusionObject->getRuntime()->popContext();
             }
         } else {
             $this->initializeFusionView();
-            $this->typoScriptView->setPackageKey($typoScriptPackageKey);
-            $this->typoScriptView->setTypoScriptPath($slashSeparatedPath);
+            $this->fusionView->setPackageKey($fusionPackageKey ?: $typoScriptPackageKey);
+            $this->fusionView->setFusionPath($slashSeparatedPath);
             if ($context !== null) {
-                $this->typoScriptView->assignMultiple($context);
+                $this->fusionView->assignMultiple($context);
             }
 
-            $output = $this->typoScriptView->render();
+            $output = $this->fusionView->render();
         }
 
         return $output;
@@ -121,11 +123,13 @@ class RenderViewHelper extends AbstractViewHelper
      */
     protected function initializeFusionView()
     {
-        $this->typoScriptView = new FusionView();
-        $this->typoScriptView->setControllerContext($this->controllerContext);
-        $this->typoScriptView->disableFallbackView();
-        if ($this->hasArgument('typoScriptFilePathPattern')) {
-            $this->typoScriptView->setTypoScriptPathPattern($this->arguments['typoScriptFilePathPattern']);
+        $this->fusionView = new FusionView();
+        $this->fusionView->setControllerContext($this->controllerContext);
+        $this->fusionView->disableFallbackView();
+        if ($this->hasArgument('fusionFilePathPattern')) {
+            $this->fusionView->setFusionPathPattern($this->arguments['fusionFilePathPattern']);
+        } elseif ($this->hasArgument('typoScriptFilePathPattern')) {
+            $this->fusionView->setFusionPathPattern($this->arguments['typoScriptFilePathPattern']);
         }
     }
 }

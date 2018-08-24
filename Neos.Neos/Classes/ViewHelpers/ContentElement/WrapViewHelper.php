@@ -16,7 +16,7 @@ use Neos\FluidAdaptor\Core\ViewHelper\AbstractViewHelper;
 use Neos\FluidAdaptor\Core\ViewHelper\Exception as ViewHelperException;
 use Neos\Neos\Service\ContentElementWrappingService;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\Fusion\TypoScriptObjects\Helpers\TypoScriptAwareViewInterface;
+use Neos\Fusion\FusionObjects\Helpers\FusionAwareViewInterface;
 
 /**
  * A view helper for manually wrapping content editables.
@@ -53,22 +53,22 @@ class WrapViewHelper extends AbstractViewHelper
      * In live workspace this just renders a the content.
      * For logged in users with access to the Backend this also adds the attributes for the RTE to work.
      *
-     * @param NodeInterface $node The node of the content element. Optional, will be resolved from the TypoScript context by default.
+     * @param NodeInterface $node The node of the content element. Optional, will be resolved from the Fusion context by default.
      * @return string The rendered property with a wrapping tag. In the user workspace this adds some required attributes for the RTE to work
      * @throws ViewHelperException
      */
     public function render(NodeInterface $node = null)
     {
         $view = $this->viewHelperVariableContainer->getView();
-        if (!$view instanceof TypoScriptAwareViewInterface) {
-            throw new ViewHelperException('This ViewHelper can only be used in a TypoScript content element. You have to specify the "node" argument if it cannot be resolved from the TypoScript context.', 1385737102);
+        if (!$view instanceof FusionAwareViewInterface) {
+            throw new ViewHelperException('This ViewHelper can only be used in a Fusion content element. You have to specify the "node" argument if it cannot be resolved from the Fusion context.', 1385737102);
         }
-        $typoScriptObject = $view->getTypoScriptObject();
-        $currentContext = $typoScriptObject->getTsRuntime()->getCurrentContext();
+        $fusionObject = $view->getFusionObject();
+        $currentContext = $fusionObject->getRuntime()->getCurrentContext();
 
         if ($node === null) {
             $node = $currentContext['node'];
         }
-        return $this->contentElementWrappingService->wrapContentObject($node, $this->renderChildren(), $typoScriptObject->getPath());
+        return $this->contentElementWrappingService->wrapContentObject($node, $this->renderChildren(), $fusionObject->getPath());
     }
 }

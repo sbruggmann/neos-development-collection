@@ -116,7 +116,7 @@ class NodeTypeManagerTest extends UnitTestCase
             ),
             'properties' => array(
                 'image' => array(
-                    'type' => \Neos\Neos\Domain\Model\Media\Image::class,
+                    'type' => 'Neos\Neos\Domain\Model\Media\Image',
                     'label' => 'Image'
                 )
             )
@@ -353,5 +353,17 @@ class NodeTypeManagerTest extends UnitTestCase
 
         $this->prepareNodeTypeManager($nodeTypesFixture);
         $this->nodeTypeManager->getNodeType('Neos.ContentRepository.Testing:Sub');
+    }
+
+    /**
+     * @test
+     */
+    public function getSubNodeTypesWithDifferentIncludeFlagValuesReturnsCorrectValues()
+    {
+        $subNodeTypes = $this->nodeTypeManager->getSubNodeTypes('Neos.ContentRepository.Testing:ContentObject', true);
+        $this->assertArrayHasKey('Neos.ContentRepository.Testing:AbstractType', $subNodeTypes);
+
+        $subNodeTypes = $this->nodeTypeManager->getSubNodeTypes('Neos.ContentRepository.Testing:ContentObject', false);
+        $this->assertArrayNotHasKey('Neos.ContentRepository.Testing:AbstractType', $subNodeTypes);
     }
 }

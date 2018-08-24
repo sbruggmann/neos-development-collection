@@ -27,7 +27,7 @@ class NodeTemplateConverter extends NodeConverter
     /**
      * A pattern that separates the node content object type from the node type
      */
-    const EXTRACT_CONTENT_TYPE_PATTERN = '/^\\\\?(?P<type>TYPO3\\\TYPO3CR\\\Domain\\\Model\\\NodeTemplate)(?:<\\\\?(?P<nodeType>[a-zA-Z0-9\\\\\:\.]+)>)?/';
+    const EXTRACT_CONTENT_TYPE_PATTERN = '/^\\\\?(?P<type>Neos\\\ContentRepository\\\Domain\\\Model\\\NodeTemplate)(?:<\\\\?(?P<nodeType>[a-zA-Z0-9\\\\\:\.]+)>)?/';
 
     /**
      * @var array
@@ -77,7 +77,7 @@ class NodeTemplateConverter extends NodeConverter
      * @return mixed An object or \Neos\Error\Messages\Error if the input format is not supported or could not be converted for other reasons
      * @throws \Exception
      */
-    public function convertFrom($source, $targetType, array $subProperties = array(), PropertyMappingConfigurationInterface $configuration = null)
+    public function convertFrom($source, $targetType = null, array $subProperties = array(), PropertyMappingConfigurationInterface $configuration = null)
     {
         $nodeTemplate = new NodeTemplate();
         $nodeType = $this->extractNodeType($targetType, $source);

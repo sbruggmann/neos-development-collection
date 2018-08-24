@@ -18,7 +18,7 @@ use Neos\Fusion\Core\Runtime;
 use Neos\Fusion\Exception;
 
 /**
- * Integrate the ContentCache into the TypoScript Runtime
+ * Integrate the ContentCache into the Fusion Runtime
  *
  * Holds cache related runtime state.
  */
@@ -117,17 +117,17 @@ class RuntimeContentCache
      * like the cache entry point.
      *
      * @param array $configuration
-     * @param string $typoScriptPath
+     * @param string $fusionPath
      * @return array An evaluate context array that needs to be passed to subsequent calls to pass the current state
      * @throws Exception
      */
-    public function enter(array $configuration, $typoScriptPath)
+    public function enter(array $configuration, $fusionPath)
     {
         $cacheForPathEnabled = isset($configuration['mode']) && ($configuration['mode'] === 'cached' || $configuration['mode'] === 'dynamic');
         $cacheForPathDisabled = isset($configuration['mode']) && ($configuration['mode'] === 'uncached' || $configuration['mode'] === 'dynamic');
 
         if ($cacheForPathDisabled && (!isset($configuration['context']) || $configuration['context'] === [])) {
-            throw new Exception(sprintf('Missing @cache.context configuration for path "%s". An uncached segment must have one or more context variable names configured.', $typoScriptPath), 1395922119);
+            throw new Exception(sprintf('Missing @cache.context configuration for path "%s". An uncached segment must have one or more context variable names configured.', $fusionPath), 1395922119);
         }
 
         $currentPathIsEntryPoint = false;
@@ -140,7 +140,7 @@ class RuntimeContentCache
 
         return [
             'configuration' => $configuration,
-            'typoScriptPath' => $typoScriptPath,
+            'fusionPath' => $fusionPath,
             'cacheForPathEnabled' => $cacheForPathEnabled,
             'cacheForPathDisabled' => $cacheForPathDisabled,
             'currentPathIsEntryPoint' => $currentPathIsEntryPoint
@@ -155,42 +155,51 @@ class RuntimeContentCache
      * minimum maximumLifetime).
      *
      * @param array $evaluateContext The current evaluation context
-     * @param object $tsObject The current TypoScript object (for "this" in evaluations)
+     * @param object $fusionObject The current Fusion object (for "this" in evaluations)
      * @return array Cache hit state as boolean and value as mixed
      */
-    public function preEvaluate(array &$evaluateContext, $tsObject)
+    public function preEvaluate(array &$evaluateContext, $fusionObject)
     {
         if ($this->enableContentCache) {
+            if ($evaluateContext['cacheForPathEnabled'] && $evaluateContext['cacheForPathDisabled']) {
+                $evaluateContext['cacheDiscriminator'] = $this->runtime->evaluate($evaluateContext['fusionPath'] . '/__meta/cache/entryDiscriminator');
+            }
             if ($evaluateContext['cacheForPathEnabled']) {
-                $evaluateContext['cacheIdentifierValues'] = $this->buildCacheIdentifierValues($evaluateContext['configuration'], $evaluateContext['typoScriptPath'], $tsObject);
+                $evaluateContext['cacheIdentifierValues'] = $this->buildCacheIdentifierValues($evaluateContext['configuration'], $evaluateContext['fusionPath'], $fusionObject);
+                $cacheDiscriminator = isset($evaluateContext['cacheDiscriminator']) ? $evaluateContext['cacheDiscriminator'] : null;
                 $self = $this;
-                $segment = $this->contentCache->getCachedSegment(function ($command, $additionalData, $cache) use ($self, $evaluateContext, $tsObject) {
+                $segment = $this->contentCache->getCachedSegment(function ($command, $additionalData, $cache) use ($self, $evaluateContext, $fusionObject) {
                     if (strpos($command, 'eval=') === 0) {
                         $unserializedContext = $self->unserializeContext($additionalData['context']);
                         $path = substr($command, 5);
                         $result = $self->evaluateUncached($path, $unserializedContext);
                         return $result;
                     } elseif (strpos($command, 'evalCached=') === 0) {
-                        $identifier = substr($command, 11);
-                        $cacheDiscriminator = $this->runtime->evaluate($additionalData['path'] . '/__meta/cache/entryDiscriminator');
-                        $cacheIdentifier = substr($identifier, 0, strpos($identifier, '_')) . '_' . md5($cacheDiscriminator);
-                        $result = $cache->get($cacheIdentifier);
-                        if ($result === false) {
-                            $unserializedContext = $self->unserializeContext($additionalData['context']);
-                            $maximumLifetime = null;
-                            if (isset($evaluateContext['configuration']['maximumLifetime'])) {
-                                $maximumLifetime = $this->runtime->evaluate($evaluateContext['typoScriptPath'] . '/__meta/cache/maximumLifetime', $tsObject);
-                            }
-                            $cacheTags = $this->buildCacheTags($evaluateContext['configuration'], $evaluateContext['typoScriptPath'], $tsObject);
-                            $result = $self->evaluateUncached($additionalData['path'], $unserializedContext);
-                            $cache->set($cacheIdentifier, $result, $cacheTags, $maximumLifetime);
-                        }
+                        /*
+                         * Why do we need the following line:
+                         * - in "enter" the cache context is decided upon which contains "currentPathIsEntryPoint".
+                         * - This can not happen in nested segments as the topmost entry point should be the only one active
+                         * - the result of a "currentPathIsEntryPoint" is that on postProcess cache segments are parsed from the content.
+                         * - To get "currentPathIsEntryPoint" only on topmost segments, the state "$self->inCacheEntryPoint" is used.
+                         *   This state can have two values "true" and "null", in case it's true a topmost segment existed and "currentPathIsEntryPoint" will not be set
+                         * - A dynamic cache segment that we resolve here is to be seen independently from the parent cached entry as it is a forking point for content
+                         *   It must create cache segment tokens in order to properly cache, but those also need to be removed from the result.
+                         *   Therefore a dynamic cache entry must always have "currentPathIsEntryPoint" to make sure the markers are parsed regardless of the caching status of the upper levels
+                         *   To make that happen the state "$self->inCacheEntryPoint" must be reset to null.
+                         */
+                        $previouslyInCacheEntryPoint = $self->inCacheEntryPoint;
+                        $self->inCacheEntryPoint = null;
 
+                        $unserializedContext = $self->unserializeContext($additionalData['context']);
+                        $this->runtime->pushContextArray($unserializedContext);
+                        $result = $this->runtime->evaluate($additionalData['path']);
+                        $this->runtime->popContext();
+                        $self->inCacheEntryPoint = $previouslyInCacheEntryPoint;
                         return $result;
                     } else {
                         throw new Exception(sprintf('Unknown uncached command "%s"', $command), 1392837596);
                     }
-                }, $evaluateContext['typoScriptPath'], $evaluateContext['cacheIdentifierValues'], $this->addCacheSegmentMarkersToPlaceholders);
+                }, $evaluateContext['fusionPath'], $evaluateContext['cacheIdentifierValues'], $this->addCacheSegmentMarkersToPlaceholders, $cacheDiscriminator);
                 if ($segment !== false) {
                     return [true, $segment];
                 } else {
@@ -200,12 +209,9 @@ class RuntimeContentCache
                 $this->cacheMetadata[] = ['lifetime' => null];
             }
 
-            if ($evaluateContext['cacheForPathEnabled'] && $evaluateContext['cacheForPathDisabled']) {
-                $evaluateContext['cacheDiscriminator'] = $this->runtime->evaluate($evaluateContext['typoScriptPath'] . '/__meta/cache/entryDiscriminator');
-            }
 
             if (isset($evaluateContext['configuration']['maximumLifetime'])) {
-                $maximumLifetime = $this->runtime->evaluate($evaluateContext['typoScriptPath'] . '/__meta/cache/maximumLifetime', $tsObject);
+                $maximumLifetime = $this->runtime->evaluate($evaluateContext['fusionPath'] . '/__meta/cache/maximumLifetime', $fusionObject);
 
                 if ($maximumLifetime !== null && $this->cacheMetadata !== []) {
                     $cacheMetadata = &$this->cacheMetadata[count($this->cacheMetadata) - 1];
@@ -224,11 +230,11 @@ class RuntimeContentCache
      * store cache entries.
      *
      * @param array $evaluateContext The current evaluation context
-     * @param object $tsObject The current TypoScript object (for "this" in evaluations)
+     * @param object $fusionObject The current Fusion object (for "this" in evaluations)
      * @param mixed $output The generated output after caching information was removed
      * @return mixed The post-processed output with cache segment markers or cleaned for the entry point
      */
-    public function postProcess(array $evaluateContext, $tsObject, $output)
+    public function postProcess(array $evaluateContext, $fusionObject, $output)
     {
         if ($this->enableContentCache && $evaluateContext['cacheForPathEnabled'] && $evaluateContext['cacheForPathDisabled']) {
             $contextArray = $this->runtime->getCurrentContext();
@@ -240,13 +246,13 @@ class RuntimeContentCache
             } else {
                 $contextVariables = $contextArray;
             }
-            $cacheTags = $this->buildCacheTags($evaluateContext['configuration'], $evaluateContext['typoScriptPath'], $tsObject);
+            $cacheTags = $this->buildCacheTags($evaluateContext['configuration'], $evaluateContext['fusionPath'], $fusionObject);
             $cacheMetadata = array_pop($this->cacheMetadata);
-            $output = $this->contentCache->createDynamicCachedSegment($output, $evaluateContext['typoScriptPath'], $contextVariables, $evaluateContext['cacheIdentifierValues'], $cacheTags, $cacheMetadata['lifetime'], $evaluateContext['cacheDiscriminator']);
+            $output = $this->contentCache->createDynamicCachedSegment($output, $evaluateContext['fusionPath'], $contextVariables, $evaluateContext['cacheIdentifierValues'], $cacheTags, $cacheMetadata['lifetime'], $evaluateContext['cacheDiscriminator']);
         } elseif ($this->enableContentCache && $evaluateContext['cacheForPathEnabled']) {
-            $cacheTags = $this->buildCacheTags($evaluateContext['configuration'], $evaluateContext['typoScriptPath'], $tsObject);
+            $cacheTags = $this->buildCacheTags($evaluateContext['configuration'], $evaluateContext['fusionPath'], $fusionObject);
             $cacheMetadata = array_pop($this->cacheMetadata);
-            $output = $this->contentCache->createCacheSegment($output, $evaluateContext['typoScriptPath'], $evaluateContext['cacheIdentifierValues'], $cacheTags, $cacheMetadata['lifetime']);
+            $output = $this->contentCache->createCacheSegment($output, $evaluateContext['fusionPath'], $evaluateContext['cacheIdentifierValues'], $cacheTags, $cacheMetadata['lifetime']);
         } elseif ($this->enableContentCache && $evaluateContext['cacheForPathDisabled'] && $this->inCacheEntryPoint) {
             $contextArray = $this->runtime->getCurrentContext();
             if (isset($evaluateContext['configuration']['context'])) {
@@ -261,7 +267,7 @@ class RuntimeContentCache
             } else {
                 $contextVariables = $contextArray;
             }
-            $output = $this->contentCache->createUncachedSegment($output, $evaluateContext['typoScriptPath'], $contextVariables);
+            $output = $this->contentCache->createUncachedSegment($output, $evaluateContext['fusionPath'], $contextVariables);
         }
 
         if ($evaluateContext['cacheForPathEnabled'] && $evaluateContext['currentPathIsEntryPoint']) {
@@ -289,7 +295,7 @@ class RuntimeContentCache
     }
 
     /**
-     * Evaluate a TypoScript path with a given context without content caching
+     * Evaluate a Fusion path with a given context without content caching
      *
      * This is used to render uncached segments "out of band" in getCachedSegment of ContentCache.
      *
@@ -315,33 +321,33 @@ class RuntimeContentCache
      * a cached content segment.
      *
      * @param array $configuration
-     * @param string $typoScriptPath
-     * @param object $tsObject The actual TypoScript object
+     * @param string $fusionPath
+     * @param object $fusionObject The actual Fusion object
      * @return array
      */
-    protected function buildCacheIdentifierValues(array $configuration, $typoScriptPath, $tsObject)
+    protected function buildCacheIdentifierValues(array $configuration, $fusionPath, $fusionObject)
     {
         $objectType = '<Neos.Fusion:GlobalCacheIdentifiers>';
         if (isset($configuration['entryIdentifier']['__objectType'])) {
             $objectType = '<' . $configuration['entryIdentifier']['__objectType'] . '>';
         }
-        return $this->runtime->evaluate($typoScriptPath . '/__meta/cache/entryIdentifier' . $objectType, $tsObject);
+        return $this->runtime->evaluate($fusionPath . '/__meta/cache/entryIdentifier' . $objectType, $fusionObject);
     }
 
     /**
      * Builds an array of string which must be used as tags for the cache entry identifier of a specific cached content segment.
      *
      * @param array $configuration
-     * @param string $typoScriptPath
-     * @param object $tsObject The actual TypoScript object
+     * @param string $fusionPath
+     * @param object $fusionObject The actual Fusion object
      * @return array
      */
-    protected function buildCacheTags(array $configuration, $typoScriptPath, $tsObject)
+    protected function buildCacheTags(array $configuration, $fusionPath, $fusionObject)
     {
         $cacheTags = [];
         if (isset($configuration['entryTags'])) {
             foreach ($configuration['entryTags'] as $tagKey => $tagValue) {
-                $tagValue = $this->runtime->evaluate($typoScriptPath . '/__meta/cache/entryTags/' . $tagKey, $tsObject);
+                $tagValue = $this->runtime->evaluate($fusionPath . '/__meta/cache/entryTags/' . $tagKey, $fusionObject);
                 if (is_array($tagValue)) {
                     $cacheTags = array_merge($cacheTags, $tagValue);
                 } elseif ((string)$tagValue !== '') {

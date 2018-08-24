@@ -12,10 +12,10 @@ namespace Neos\Fusion;
  */
 
 /**
- * A mock for a TypoScript object
+ * A mock for a Fusion object
  *
  */
-class MockTypoScriptObject
+class MockFusionObject
 {
     protected $value;
 

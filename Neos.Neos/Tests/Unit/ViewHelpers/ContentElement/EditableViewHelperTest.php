@@ -20,8 +20,8 @@ use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Service\AuthorizationService;
 use Neos\ContentRepository\Domain\Model\NodeType;
 use Neos\Fusion\Core\Runtime;
-use Neos\Fusion\TypoScriptObjects\Helpers\FluidView;
-use Neos\Fusion\TypoScriptObjects\TemplateImplementation;
+use Neos\Fusion\FusionObjects\Helpers\FluidView;
+use Neos\Fusion\FusionObjects\TemplateImplementation;
 use Neos\Neos\Service\ContentElementEditableService;
 
 /**
@@ -57,12 +57,12 @@ class EditableViewHelperTest extends ViewHelperBaseTestcase
     /**
      * @var Runtime
      */
-    protected $mockTsRuntime;
+    protected $mockRuntime;
 
     /**
      * @var array
      */
-    protected $mockTsContext;
+    protected $mockContext;
 
     /**
      * @var NodeInterface
@@ -99,8 +99,8 @@ class EditableViewHelperTest extends ViewHelperBaseTestcase
         $this->inject($this->editableViewHelper, 'contentElementEditableService', $this->mockContentElementEditableService);
 
         $this->mockTemplateImplementation = $this->getMockBuilder(TemplateImplementation::class)->disableOriginalConstructor()->getMock();
-        
-        $this->mockTsRuntime = $this->getMockBuilder(Runtime::class)->disableOriginalConstructor()->getMock();
+
+        $this->mockRuntime = $this->getMockBuilder(Runtime::class)->disableOriginalConstructor()->getMock();
 
         $this->mockContentContext = $this->getMockBuilder(ContentContext::class)->disableOriginalConstructor()->getMock();
 
@@ -108,11 +108,11 @@ class EditableViewHelperTest extends ViewHelperBaseTestcase
         $this->mockNode->expects($this->any())->method('getContext')->will($this->returnValue($this->mockContentContext));
         $this->mockNode->expects($this->any())->method('getNodeType')->will($this->returnValue(new NodeType('Acme.Test:Headline', [], [])));
 
-        $this->mockTsContext = array('node' => $this->mockNode);
-        $this->mockTsRuntime->expects($this->any())->method('getCurrentContext')->will($this->returnValue($this->mockTsContext));
-        $this->mockTemplateImplementation->expects($this->any())->method('getTsRuntime')->will($this->returnValue($this->mockTsRuntime));
+        $this->mockContext = array('node' => $this->mockNode);
+        $this->mockRuntime->expects($this->any())->method('getCurrentContext')->will($this->returnValue($this->mockContext));
+        $this->mockTemplateImplementation->expects($this->any())->method('getRuntime')->will($this->returnValue($this->mockRuntime));
         $this->mockView = $this->getAccessibleMock(FluidView::class, array(), array(), '', false);
-        $this->mockView->expects($this->any())->method('getTypoScriptObject')->will($this->returnValue($this->mockTemplateImplementation));
+        $this->mockView->expects($this->any())->method('getFusionObject')->will($this->returnValue($this->mockTemplateImplementation));
 
         $this->editableViewHelper->initializeArguments();
     }
@@ -134,9 +134,9 @@ class EditableViewHelperTest extends ViewHelperBaseTestcase
     }
 
     /**
-     * Mocks access to the TypoScriptObject
+     * Mocks access to the FusionObject
      */
-    protected function injectTypoScriptObject()
+    protected function setUpViewMockAccess()
     {
         $this->viewHelperVariableContainer->expects($this->any())->method('getView')->will($this->returnValue($this->mockView));
     }
@@ -148,7 +148,7 @@ class EditableViewHelperTest extends ViewHelperBaseTestcase
     public function renderThrowsExceptionIfTheGivenPropertyIsNotAccessible()
     {
         $this->injectDependenciesIntoViewHelper($this->editableViewHelper);
-        $this->injectTypoScriptObject();
+        $this->setUpViewMockAccess();
         $this->editableViewHelper->render('someProperty');
     }
 
@@ -175,7 +175,7 @@ class EditableViewHelperTest extends ViewHelperBaseTestcase
         );
         $this->tagBuilder->expects($this->once())->method('setContent')->with('somePropertyValue');
         $this->injectDependenciesIntoViewHelper($this->editableViewHelper);
-        $this->injectTypoScriptObject();
+        $this->setUpViewMockAccess();
         $this->editableViewHelper->render('someProperty');
     }
 
@@ -191,7 +191,7 @@ class EditableViewHelperTest extends ViewHelperBaseTestcase
         $this->editableViewHelper->expects($this->atLeastOnce())->method('renderChildren')->will($this->returnValue('overriddenPropertyValue'));
         $this->tagBuilder->expects($this->once())->method('setContent')->with('overriddenPropertyValue');
         $this->injectDependenciesIntoViewHelper($this->editableViewHelper);
-        $this->injectTypoScriptObject();
+        $this->setUpViewMockAccess();
         $this->editableViewHelper->render('someProperty');
     }
 
@@ -206,7 +206,7 @@ class EditableViewHelperTest extends ViewHelperBaseTestcase
         $this->tagBuilder->expects($this->once())->method('render')->with()->willReturn('<div>somePropertyValue</div>');
         $this->mockContentElementEditableService->expects($this->once())->method('wrapContentProperty')->with($this->mockNode, 'someProperty', '<div>somePropertyValue</div>');
         $this->injectDependenciesIntoViewHelper($this->editableViewHelper);
-        $this->injectTypoScriptObject();
+        $this->setUpViewMockAccess();
         $this->editableViewHelper->render('someProperty');
     }
 

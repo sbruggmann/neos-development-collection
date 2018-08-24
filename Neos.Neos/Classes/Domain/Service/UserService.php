@@ -13,6 +13,7 @@ namespace Neos\Neos\Domain\Service;
 
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Persistence\Exception\IllegalObjectTypeException;
+use Neos\Flow\Persistence\PersistenceManagerInterface;
 use Neos\Flow\Security\Account;
 use Neos\Flow\Security\AccountFactory;
 use Neos\Flow\Security\AccountRepository;
@@ -51,7 +52,7 @@ class UserService
      *
      * @var string
      */
-    protected $defaultAuthenticationProviderName = 'Typo3BackendProvider';
+    protected $defaultAuthenticationProviderName = 'Neos.Neos:Backend';
 
     /**
      * @Flow\Inject
@@ -126,6 +127,12 @@ class UserService
     protected $hashService;
 
     /**
+     * @Flow\Inject
+     * @var PersistenceManagerInterface
+     */
+    protected $persistenceManager;
+
+    /**
      * @Flow\Inject(lazy = FALSE)
      * @var Now
      */
@@ -151,34 +158,28 @@ class UserService
      * Retrieves an existing user by the given username
      *
      * @param string $username The username
-     * @param string $authenticationProviderName Name of the authentication provider to use. Example: "Typo3BackendProvider"
+     * @param string $authenticationProviderName Name of the authentication provider to use. Example: "Neos.Neos:Backend"
      * @return User The user, or null if the user does not exist
      * @throws Exception
      * @api
      */
     public function getUser($username, $authenticationProviderName = null)
     {
-        if ($authenticationProviderName !== null && isset($this->runtimeUserCache['a_' . $authenticationProviderName][$username])) {
-            return $this->runtimeUserCache['a_' . $authenticationProviderName][$username];
-        } elseif (isset($this->runtimeUserCache['u_' . $username])) {
-            return $this->runtimeUserCache['u_' . $username];
+        $authenticationProviderName = $authenticationProviderName ?: $this->defaultAuthenticationProviderName;
+        $cacheIdentifier = $authenticationProviderName . '~' . $username;
+
+        if (!array_key_exists($cacheIdentifier, $this->runtimeUserCache)) {
+            $user = $this->findUserForAccount($username, $authenticationProviderName);
+            $this->runtimeUserCache[$cacheIdentifier] = $user === null ? null : $this->persistenceManager->getIdentifierByObject($user);
+            return $user;
         }
-        $account = $this->accountRepository->findByAccountIdentifierAndAuthenticationProviderName($username, $authenticationProviderName ?: $this->defaultAuthenticationProviderName);
-        if (!$account instanceof Account) {
+
+        $userIdentifier = $this->runtimeUserCache[$cacheIdentifier];
+        if ($userIdentifier === null) {
             return null;
         }
-        $user = $this->partyService->getAssignedPartyOfAccount($account);
-        if (!$user instanceof User) {
-            throw new Exception(sprintf('Unexpected user type "%s". An account with the identifier "%s" exists, but the corresponding party is not a Neos User.', get_class($user), $username), 1422270948);
-        }
-        if ($authenticationProviderName !== null) {
-            if (!isset($this->runtimeUserCache['a_' . $authenticationProviderName])) {
-                $this->runtimeUserCache['a_' . $authenticationProviderName] = [];
-            }
-            $this->runtimeUserCache['a_' . $authenticationProviderName][$username] = $user;
-        } else {
-            $this->runtimeUserCache['u_' . $username] = $user;
-        }
+
+        $user = $this->partyRepository->findByIdentifier($userIdentifier);
         return $user;
     }
 
@@ -232,7 +233,7 @@ class UserService
      * @param string $firstName First name of the user to be created
      * @param string $lastName Last name of the user to be created
      * @param array $roleIdentifiers A list of role identifiers to assign
-     * @param string $authenticationProviderName Name of the authentication provider to use. Example: "Typo3BackendProvider"
+     * @param string $authenticationProviderName Name of the authentication provider to use. Example: "Neos.Neos:Backend"
      * @return User The created user instance
      * @api
      */
@@ -258,7 +259,7 @@ class UserService
      * @param string $password Password of the user to be created
      * @param User $user The pre-built user object to start with
      * @param array $roleIdentifiers A list of role identifiers to assign
-     * @param string $authenticationProviderName Name of the authentication provider to use. Example: "Typo3BackendProvider"
+     * @param string $authenticationProviderName Name of the authentication provider to use. Example: "Neos.Neos:Backend"
      * @return User The same user object
      * @api
      */
@@ -303,12 +304,8 @@ class UserService
      */
     public function deleteUser(User $user)
     {
-        $backendUserRole = $this->policyService->getRole('Neos.Neos:AbstractEditor');
         foreach ($user->getAccounts() as $account) {
-            /** @var Account $account */
-            if ($account->hasRole($backendUserRole)) {
-                $this->deletePersonalWorkspace($account->getAccountIdentifier());
-            }
+            $this->deletePersonalWorkspace($account->getAccountIdentifier());
             $this->accountRepository->remove($account);
         }
 
@@ -817,5 +814,26 @@ class UserService
             $workspace->setOwner(null);
             $this->workspaceRepository->update($workspace);
         }
+    }
+
+    /**
+     * @param string $username
+     * @param string $authenticationProviderName
+     * @return \Neos\Party\Domain\Model\AbstractParty|null
+     * @throws Exception
+     */
+    protected function findUserForAccount($username, $authenticationProviderName)
+    {
+        $account = $this->accountRepository->findByAccountIdentifierAndAuthenticationProviderName($username, $authenticationProviderName ?: $this->defaultAuthenticationProviderName);
+        if ($account === null) {
+            return null;
+        }
+
+        $user = $this->partyService->getAssignedPartyOfAccount($account);
+        if (!$user instanceof User) {
+            throw new Exception(sprintf('Unexpected user type "%s". An account with the identifier "%s" exists, but the corresponding party is not a Neos User.', get_class($user), $username), 1422270948);
+        }
+
+        return $user;
     }
 }

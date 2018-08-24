@@ -17,38 +17,38 @@ use Neos\Flow\Mvc\Exception\StopActionException;
 use Neos\Fusion\Exception\RuntimeException;
 
 /**
- * Wrap the exception to retain the typoScript path at which it was originally thrown
+ * Wrap the exception to retain the fusion path at which it was originally thrown
  */
 class BubblingHandler extends AbstractRenderingExceptionHandler
 {
     /**
-     * Handle an Exception thrown while rendering TypoScript
+     * Handle an Exception thrown while rendering Fusion
      *
-     * @param array $typoScriptPath
+     * @param array $fusionPath
      * @param \Exception $exception
      * @return string
      * @throws StopActionException
      * @throws InvalidConfigurationException
      * @throws \Exception
      */
-    public function handleRenderingException($typoScriptPath, \Exception $exception)
+    public function handleRenderingException($fusionPath, \Exception $exception)
     {
         if ($exception instanceof RuntimeException) {
             throw $exception;
         } else {
-            throw new RuntimeException('TypoScript Rendering Exception, see typoScriptPath and nested Exception for details.', 1401803055, $exception, $typoScriptPath);
+            throw new RuntimeException('Fusion Rendering Exception, see fusionPath and nested Exception for details.', 1401803055, $exception, $fusionPath);
         }
     }
 
     /**
-     * Handles an Exception thrown while rendering TypoScript
+     * Handles an Exception thrown while rendering Fusion
      *
-     * @param string $typoScriptPath path causing the exception
+     * @param string $fusionPath path causing the exception
      * @param \Exception $exception exception to handle
      * @param integer $referenceCode
      * @return void
      */
-    protected function handle($typoScriptPath, \Exception $exception, $referenceCode)
+    protected function handle($fusionPath, \Exception $exception, $referenceCode)
     {
         // nothing to be done here, as this method is normally called in "handleRenderingException()", which was overridden above.
     }

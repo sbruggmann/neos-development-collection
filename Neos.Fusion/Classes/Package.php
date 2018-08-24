@@ -20,7 +20,7 @@ use Neos\Flow\Package\PackageManagerInterface;
 use Neos\Fusion\Core\Cache\FileMonitorListener;
 
 /**
- * The TYPO3 TypoScript Package
+ * The Neos Fusion Package
  */
 class Package extends BasePackage
 {
@@ -37,29 +37,29 @@ class Package extends BasePackage
         $context = $bootstrap->getContext();
         if (!$context->isProduction()) {
             $dispatcher->connect(Sequence::class, 'afterInvokeStep', function ($step) use ($bootstrap, $dispatcher) {
-                if ($step->getIdentifier() === 'typo3.flow:systemfilemonitor') {
-                    $typoScriptFileMonitor = FileMonitor::createFileMonitorAtBoot('TypoScript_Files', $bootstrap);
+                if ($step->getIdentifier() === 'neos.flow:systemfilemonitor') {
+                    $fusionFileMonitor = FileMonitor::createFileMonitorAtBoot('Fusion_Files', $bootstrap);
                     $packageManager = $bootstrap->getEarlyInstance(PackageManagerInterface::class);
                     foreach ($packageManager->getActivePackages() as $packageKey => $package) {
                         if ($packageManager->isPackageFrozen($packageKey)) {
                             continue;
                         }
-                        $typoScriptPaths = array(
-                            $package->getResourcesPath() . 'Private/TypoScript',
-                            $package->getResourcesPath() . 'Private/TypoScripts',
+
+                        $fusionPaths = array(
+                            $package->getResourcesPath() . 'Private/Fusion'
                         );
-                        foreach ($typoScriptPaths as $typoScriptPath) {
-                            if (is_dir($typoScriptPath)) {
-                                $typoScriptFileMonitor->monitorDirectory($typoScriptPath);
+                        foreach ($fusionPaths as $fusionPath) {
+                            if (is_dir($fusionPath)) {
+                                $fusionFileMonitor->monitorDirectory($fusionPath);
                             }
                         }
                     }
 
-                    $typoScriptFileMonitor->detectChanges();
-                    $typoScriptFileMonitor->shutdownObject();
+                    $fusionFileMonitor->detectChanges();
+                    $fusionFileMonitor->shutdownObject();
                 }
 
-                if ($step->getIdentifier() === 'typo3.flow:cachemanagement') {
+                if ($step->getIdentifier() === 'neos.flow:cachemanagement') {
                     $cacheManager = $bootstrap->getEarlyInstance(CacheManager::class);
                     $listener = new FileMonitorListener($cacheManager);
                     $dispatcher->connect(FileMonitor::class, 'filesHaveChanged', $listener, 'flushContentCacheOnFileChanges');

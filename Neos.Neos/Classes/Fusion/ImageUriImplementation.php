@@ -15,14 +15,15 @@ use Neos\Flow\Annotations as Flow;
 use Neos\Media\Domain\Model\AssetInterface;
 use Neos\Media\Domain\Model\ThumbnailConfiguration;
 use Neos\Media\Domain\Service\AssetService;
-use Neos\Fusion\TypoScriptObjects\AbstractTypoScriptObject;
+use Neos\Fusion\FusionObjects\AbstractFusionObject;
+use Neos\Media\Domain\Service\ThumbnailService;
 
 /**
  * Render an AssetInterface: object. Accepts the same parameters as the uri.image ViewHelper of the Neos.Media package:
  * asset, width, maximumWidth, height, maximumHeight, allowCropping, allowUpScaling.
  *
  */
-class ImageUriImplementation extends AbstractTypoScriptObject
+class ImageUriImplementation extends AbstractFusionObject
 {
     /**
      * Resource publisher
@@ -33,13 +34,19 @@ class ImageUriImplementation extends AbstractTypoScriptObject
     protected $assetService;
 
     /**
+     * @Flow\Inject
+     * @var ThumbnailService
+     */
+    protected $thumbnailService;
+
+    /**
      * Asset
      *
      * @return AssetInterface
      */
     public function getAsset()
     {
-        return $this->tsValue('asset');
+        return $this->fusionValue('asset');
     }
 
     /**
@@ -49,7 +56,7 @@ class ImageUriImplementation extends AbstractTypoScriptObject
      */
     public function getWidth()
     {
-        return $this->tsValue('width');
+        return $this->fusionValue('width');
     }
 
     /**
@@ -59,7 +66,7 @@ class ImageUriImplementation extends AbstractTypoScriptObject
      */
     public function getMaximumWidth()
     {
-        return $this->tsValue('maximumWidth');
+        return $this->fusionValue('maximumWidth');
     }
 
     /**
@@ -69,7 +76,7 @@ class ImageUriImplementation extends AbstractTypoScriptObject
      */
     public function getHeight()
     {
-        return $this->tsValue('height');
+        return $this->fusionValue('height');
     }
 
     /**
@@ -79,7 +86,7 @@ class ImageUriImplementation extends AbstractTypoScriptObject
      */
     public function getMaximumHeight()
     {
-        return $this->tsValue('maximumHeight');
+        return $this->fusionValue('maximumHeight');
     }
 
     /**
@@ -89,7 +96,7 @@ class ImageUriImplementation extends AbstractTypoScriptObject
      */
     public function getAllowCropping()
     {
-        return $this->tsValue('allowCropping');
+        return $this->fusionValue('allowCropping');
     }
 
     /**
@@ -99,7 +106,33 @@ class ImageUriImplementation extends AbstractTypoScriptObject
      */
     public function getAllowUpScaling()
     {
-        return $this->tsValue('allowUpScaling');
+        return $this->fusionValue('allowUpScaling');
+    }
+
+
+    public function getQuality()
+    {
+        return $this->tsValue('quality');
+    }
+
+    /**
+     * Async
+     *
+     * @return boolean
+     */
+    public function getAsync()
+    {
+        return $this->fusionValue('async');
+    }
+
+    /**
+     * Preset
+     *
+     * @return string
+     */
+    public function getPreset()
+    {
+        return $this->fusionValue('preset');
     }
 
     /**
@@ -111,11 +144,18 @@ class ImageUriImplementation extends AbstractTypoScriptObject
     public function evaluate()
     {
         $asset = $this->getAsset();
+        $preset = $this->getPreset();
+
         if (!$asset instanceof AssetInterface) {
             throw new \Exception('No asset given for rendering.', 1415184217);
         }
-        $thumbnailConfiguration = new ThumbnailConfiguration($this->getWidth(), $this->getMaximumWidth(), $this->getHeight(), $this->getMaximumHeight(), $this->getAllowCropping(), $this->getAllowUpScaling());
-        $thumbnailData = $this->assetService->getThumbnailUriAndSizeForAsset($asset, $thumbnailConfiguration);
+        if (!empty($preset)) {
+            $thumbnailConfiguration = $this->thumbnailService->getThumbnailConfigurationForPreset($preset);
+        } else {
+            $thumbnailConfiguration = new ThumbnailConfiguration($this->getWidth(), $this->getMaximumWidth(), $this->getHeight(), $this->getMaximumHeight(), $this->getAllowCropping(), $this->getAllowUpScaling(), $this->getAsync(), $this->getQuality());
+        }
+        $request = $this->getRuntime()->getControllerContext()->getRequest();
+        $thumbnailData = $this->assetService->getThumbnailUriAndSizeForAsset($asset, $thumbnailConfiguration, $request);
         if ($thumbnailData === null) {
             return '';
         }

@@ -15,10 +15,10 @@ use Neos\Flow\Annotations as Flow;
 use Neos\Neos\Domain\Exception;
 use Neos\Neos\Service\LinkingService;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\Fusion\TypoScriptObjects\AbstractTypoScriptObject;
+use Neos\Fusion\FusionObjects\AbstractFusionObject;
 
 /**
- * A TypoScript Object that converts link references in the format "<type>://<UUID>" to proper URIs
+ * A Fusion Object that converts link references in the format "<type>://<UUID>" to proper URIs
  *
  * Right now node://<UUID> and asset://<UUID> are supported URI schemes.
  *
@@ -48,7 +48,7 @@ use Neos\Fusion\TypoScriptObjects\AbstractTypoScriptObject;
  *     absolute = true
  *   }
  */
-class ConvertUrisImplementation extends AbstractTypoScriptObject
+class ConvertUrisImplementation extends AbstractFusionObject
 {
     /**
      * @Flow\Inject
@@ -67,41 +67,41 @@ class ConvertUrisImplementation extends AbstractTypoScriptObject
      */
     public function evaluate()
     {
-        $text = $this->tsValue('value');
+        $text = $this->fusionValue('value');
 
         if ($text === '' || $text === null) {
             return '';
         }
 
         if (!is_string($text)) {
-            throw new Exception(sprintf('Only strings can be processed by this TypoScript object, given: "%s".', gettype($text)), 1382624080);
+            throw new Exception(sprintf('Only strings can be processed by this Fusion object, given: "%s".', gettype($text)), 1382624080);
         }
 
-        $node = $this->tsValue('node');
+        $node = $this->fusionValue('node');
 
         if (!$node instanceof NodeInterface) {
             throw new Exception(sprintf('The current node must be an instance of NodeInterface, given: "%s".', gettype($text)), 1382624087);
         }
 
-        if ($node->getContext()->getWorkspace()->getName() !== 'live' && !($this->tsValue('forceConversion'))) {
+        if ($node->getContext()->getWorkspace()->getName() !== 'live' && !($this->fusionValue('forceConversion'))) {
             return $text;
         }
 
         $unresolvedUris = array();
         $linkingService = $this->linkingService;
-        $controllerContext = $this->tsRuntime->getControllerContext();
+        $controllerContext = $this->runtime->getControllerContext();
 
-        $absolute = $this->tsValue('absolute');
+        $absolute = $this->fusionValue('absolute');
 
         $processedContent = preg_replace_callback(LinkingService::PATTERN_SUPPORTED_URIS, function (array $matches) use ($node, $linkingService, $controllerContext, &$unresolvedUris, $absolute) {
             switch ($matches[1]) {
                 case 'node':
                     $resolvedUri = $linkingService->resolveNodeUri($matches[0], $node, $controllerContext, $absolute);
-                    $this->tsRuntime->addCacheTag('node', $matches[2]);
+                    $this->runtime->addCacheTag('node', $matches[2]);
                     break;
                 case 'asset':
                     $resolvedUri = $linkingService->resolveAssetUri($matches[0]);
-                    $this->tsRuntime->addCacheTag('asset', $matches[2]);
+                    $this->runtime->addCacheTag('asset', $matches[2]);
                     break;
                 default:
                     $resolvedUri = null;
@@ -134,12 +134,12 @@ class ConvertUrisImplementation extends AbstractTypoScriptObject
      */
     protected function replaceLinkTargets($processedContent)
     {
-        $externalLinkTarget = trim($this->tsValue('externalLinkTarget'));
-        $resourceLinkTarget = trim($this->tsValue('resourceLinkTarget'));
+        $externalLinkTarget = trim($this->fusionValue('externalLinkTarget'));
+        $resourceLinkTarget = trim($this->fusionValue('resourceLinkTarget'));
         if ($externalLinkTarget === '' && $resourceLinkTarget === '') {
             return $processedContent;
         }
-        $controllerContext = $this->tsRuntime->getControllerContext();
+        $controllerContext = $this->runtime->getControllerContext();
         $host = $controllerContext->getRequest()->getHttpRequest()->getUri()->getHost();
         $processedContent = preg_replace_callback(
             '~<a.*?href="(.*?)".*?>~i',

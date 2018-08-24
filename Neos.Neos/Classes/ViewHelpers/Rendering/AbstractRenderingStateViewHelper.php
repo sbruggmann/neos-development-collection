@@ -16,7 +16,7 @@ use Neos\FluidAdaptor\Core\ViewHelper\AbstractViewHelper;
 use Neos\FluidAdaptor\Core\ViewHelper\Exception as ViewHelperException;
 use Neos\Neos\Domain\Service\ContentContext;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\Fusion\TypoScriptObjects\Helpers\TypoScriptAwareViewInterface;
+use Neos\Fusion\FusionObjects\Helpers\FusionAwareViewInterface;
 
 /**
  * Abstract ViewHelper for all Neos rendering state helpers.
@@ -24,19 +24,19 @@ use Neos\Fusion\TypoScriptObjects\Helpers\TypoScriptAwareViewInterface;
 abstract class AbstractRenderingStateViewHelper extends AbstractViewHelper
 {
     /**
-     * Get a node from the current TypoScript context if available.
+     * Get a node from the current Fusion context if available.
      *
      * @return NodeInterface|NULL
      *
-     * @TODO Refactor to a TypoScript Context trait (in Neos.Fusion) that can be used inside ViewHelpers to get variables from the TypoScript context.
+     * @TODO Refactor to a Fusion Context trait (in Neos.Fusion) that can be used inside ViewHelpers to get variables from the Fusion context.
      */
     protected function getContextNode()
     {
         $baseNode = null;
         $view = $this->viewHelperVariableContainer->getView();
-        if ($view instanceof TypoScriptAwareViewInterface) {
-            $typoScriptObject = $view->getTypoScriptObject();
-            $currentContext = $typoScriptObject->getTsRuntime()->getCurrentContext();
+        if ($view instanceof FusionAwareViewInterface) {
+            $fusionObject = $view->getFusionObject();
+            $currentContext = $fusionObject->getRuntime()->getCurrentContext();
             if (isset($currentContext['node'])) {
                 $baseNode = $currentContext['node'];
             }

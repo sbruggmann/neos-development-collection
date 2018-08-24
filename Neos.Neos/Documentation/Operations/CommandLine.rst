@@ -25,7 +25,7 @@ Here is an example:
   Add a role to a user
 
   COMMAND:
-    typo3.neos:user:addrole
+    neos.neos:user:addrole
 
   USAGE:
     ./flow user:addrole [<options>] <username> <role>
@@ -37,7 +37,7 @@ Here is an example:
 
   OPTIONS:
     --authentication-provider Name of the authentication provider to use. Example:
-                         "Typo3BackendProvider
+                         "Neos.Neos:Backend
 
   DESCRIPTION:
     This command allows for adding a specific role to an existing user.
@@ -78,7 +78,7 @@ Workspace Management
 The commands to manage workspaces reflect what is possible in the Neos user interface. They allow to list,
 create and delete workspaces as well as publish and discard changes.
 
-One notable difference is that rebasing a workspace is possivle from the command line *even if it contains
+One notable difference is that rebasing a workspace is possible from the command line *even if it contains
 unpublished changes*.
 
 =======================================  ========================================

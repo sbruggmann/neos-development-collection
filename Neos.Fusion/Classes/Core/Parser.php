@@ -18,7 +18,7 @@ use Neos\Utility\Arrays;
 use Neos\Fusion;
 
 /**
- * The TypoScript Parser
+ * The Fusion Parser
  *
  * @api
  */
@@ -157,7 +157,7 @@ class Parser implements ParserInterface
 	/x';
     const SPLIT_PATTERN_VALUENUMBER = '/^\s*-?\d+\s*$/';
     const SPLIT_PATTERN_VALUEFLOATNUMBER = '/^\s*-?\d+(\.\d+)?\s*$/';
-    const SPLIT_PATTERN_VALUELITERAL = '/^"((?:\\\\.|[^\\\\"])*)"|\'((?:\\\\.|[^\\\\\'])*)\'$/';
+    const SPLIT_PATTERN_VALUELITERAL = '/^"([^"\\\\]*(?>\\\\.[^"\\\\]*)*)"|\'([^\'\\\\]*(?>\\\\.[^\'\\\\]*)*)\'$/';
     const SPLIT_PATTERN_VALUEMULTILINELITERAL = '/
 		^(
 			(?P<DoubleQuoteChar>")
@@ -191,6 +191,9 @@ class Parser implements ParserInterface
 		\s*$
 	/x';
 
+    const SCAN_PATTERN_DSL_EXPRESSION_START = '/^[a-zA-Z0-9\.]+`/';
+    const SPLIT_PATTERN_DSL_EXPRESSION = '/^(?P<identifier>[a-zA-Z0-9\.]+)`(?P<code>[^`]*)`$/';
+
     /**
      * Reserved parse tree keys for internal usage.
      *
@@ -205,7 +208,13 @@ class Parser implements ParserInterface
     protected $objectManager;
 
     /**
-     * The TypoScript object tree, created by this parser.
+     * @Flow\Inject
+     * @var DslFactory
+     */
+    protected $dslFactory;
+
+    /**
+     * The Fusion object tree, created by this parser.
      * @var array
      */
     protected $objectTree = array();
@@ -236,13 +245,13 @@ class Parser implements ParserInterface
 
     /**
      * An optional context path which is used as a prefix for inclusion of further
-     * TypoScript files
+     * Fusion files
      * @var string
      */
     protected $contextPathAndFilename = null;
 
     /**
-     * Namespaces used for resolution of TypoScript object names. These namespaces
+     * Namespaces used for resolution of Fusion object names. These namespaces
      * are a mapping from a user defined key (alias) to a package key (the namespace).
      * By convention, the namespace should be a package key, but other strings would
      * be possible, too. Note that, in order to resolve an object type, a prototype
@@ -256,28 +265,29 @@ class Parser implements ParserInterface
     );
 
     /**
-     * Parses the given TypoScript source code and returns an object tree
+     * Parses the given Fusion source code and returns an object tree
      * as the result.
      *
-     * @param string $sourceCode The TypoScript source code to parse
-     * @param string $contextPathAndFilename An optional path and filename to use as a prefix for inclusion of further TypoScript files
+     * @param string $sourceCode The Fusion source code to parse
+     * @param string $contextPathAndFilename An optional path and filename to use as a prefix for inclusion of further Fusion files
      * @param array $objectTreeUntilNow Used internally for keeping track of the built object tree
      * @param boolean $buildPrototypeHierarchy Merge prototype configurations or not. Will be FALSE for includes to only do that once at the end.
-     * @return array A TypoScript object tree, generated from the source code
+     * @return array A Fusion object tree, generated from the source code
      * @throws Fusion\Exception
      * @api
      */
     public function parse($sourceCode, $contextPathAndFilename = null, array $objectTreeUntilNow = array(), $buildPrototypeHierarchy = true)
     {
         if (!is_string($sourceCode)) {
-            throw new Fusion\Exception('Cannot parse TypoScript - $sourceCode must be of type string!', 1180203775);
+            throw new Fusion\Exception('Cannot parse Fusion - $sourceCode must be of type string!', 1180203775);
         }
         $this->initialize();
         $this->objectTree = $objectTreeUntilNow;
         $this->contextPathAndFilename = $contextPathAndFilename;
+        $sourceCode = str_replace("\r\n", "\n", $sourceCode);
         $this->currentSourceCodeLines = explode(chr(10), $sourceCode);
-        while (($typoScriptLine = $this->getNextTypoScriptLine()) !== false) {
-            $this->parseTypoScriptLine($typoScriptLine);
+        while (($fusionLine = $this->getNextfusionLine()) !== false) {
+            $this->parseFusionLine($fusionLine);
         }
 
         if ($buildPrototypeHierarchy) {
@@ -290,15 +300,15 @@ class Parser implements ParserInterface
      * Sets the given alias to the specified namespace.
      *
      * The namespaces defined through this setter or through a "namespace" declaration
-     * in one of the TypoScripts are used to resolve a fully qualified TypoScript
-     * object name while parsing TypoScript code.
+     * in one of the Fusions are used to resolve a fully qualified Fusion
+     * object name while parsing Fusion code.
      *
      * The alias is the handle by wich the namespace can be referred to.
      * The namespace is, by convention, a package key which must correspond to a
-     * namespace used in the prototype definitions for TypoScript object types.
+     * namespace used in the prototype definitions for Fusion object types.
      *
      * The special alias "default" is used as a fallback for resolution of unqualified
-     * TypoScript object types.
+     * Fusion object types.
      *
      * @param string $alias An alias for the given namespace, for example "neos"
      * @param string $namespace The namespace, for example "Neos.Neos"
@@ -318,7 +328,7 @@ class Parser implements ParserInterface
     }
 
     /**
-     * Initializes the TypoScript parser
+     * Initializes the Fusion parser
      *
      * @return void
      */
@@ -332,46 +342,70 @@ class Parser implements ParserInterface
     }
 
     /**
-     * Get the next, unparsed line of TypoScript from this->currentSourceCodeLines and increase the pointer
+     * Get the next, unparsed line of Fusion from this->currentSourceCodeLines and increase the pointer
      *
-     * @return string next line of typoscript to parse
+     * @deprecated with 3.0 will be removed with 4.0
+     * @return string next line of Fusion to parse
      */
     protected function getNextTypoScriptLine()
     {
-        $typoScriptLine = current($this->currentSourceCodeLines);
-        next($this->currentSourceCodeLines);
-        $this->currentLineNumber++;
-        return $typoScriptLine;
+        return $this->getNextFusionLine();
     }
 
     /**
-     * Parses one line of TypoScript
+     * Get the next, unparsed line of Fusion from this->currentSourceCodeLines and increase the pointer
      *
-     * @param string $typoScriptLine One line of TypoScript code
+     * @return string next line of Fusion to parse
+     */
+    protected function getNextFusionLine()
+    {
+        $fusionLine = current($this->currentSourceCodeLines);
+        next($this->currentSourceCodeLines);
+        $this->currentLineNumber++;
+        return $fusionLine;
+    }
+
+    /**
+     * Parses one line of Fusion
+     *
+     * @deprecated with 3.0 will be removed with 4.0
+     * @param string $fusionLine One line of Fusion code
      * @return void
      * @throws Fusion\Exception
      */
-    protected function parseTypoScriptLine($typoScriptLine)
+    protected function parseTypoScriptLine($fusionLine)
     {
-        $typoScriptLine = trim($typoScriptLine);
+        $this->parseFusionLine($fusionLine);
+    }
+
+    /**
+     * Parses one line of Fusion
+     *
+     * @param string $fusionLine One line of Fusion code
+     * @return void
+     * @throws Fusion\Exception
+     */
+    protected function parseFusionLine($fusionLine)
+    {
+        $fusionLine = trim($fusionLine);
 
         if ($this->currentBlockCommentState === true) {
-            $this->parseComment($typoScriptLine);
+            $this->parseComment($fusionLine);
         } else {
-            if ($typoScriptLine === '') {
+            if ($fusionLine === '') {
                 return;
-            } elseif (preg_match(self::SCAN_PATTERN_COMMENT, $typoScriptLine)) {
-                $this->parseComment($typoScriptLine);
-            } elseif (preg_match(self::SCAN_PATTERN_OPENINGCONFINEMENT, $typoScriptLine)) {
-                $this->parseConfinementBlock($typoScriptLine, true);
-            } elseif (preg_match(self::SCAN_PATTERN_CLOSINGCONFINEMENT, $typoScriptLine)) {
-                $this->parseConfinementBlock($typoScriptLine, false);
-            } elseif (preg_match(self::SCAN_PATTERN_DECLARATION, $typoScriptLine)) {
-                $this->parseDeclaration($typoScriptLine);
-            } elseif (preg_match(self::SCAN_PATTERN_OBJECTDEFINITION, $typoScriptLine)) {
-                $this->parseObjectDefinition($typoScriptLine);
+            } elseif (preg_match(self::SCAN_PATTERN_COMMENT, $fusionLine)) {
+                $this->parseComment($fusionLine);
+            } elseif (preg_match(self::SCAN_PATTERN_OPENINGCONFINEMENT, $fusionLine)) {
+                $this->parseConfinementBlock($fusionLine, true);
+            } elseif (preg_match(self::SCAN_PATTERN_CLOSINGCONFINEMENT, $fusionLine)) {
+                $this->parseConfinementBlock($fusionLine, false);
+            } elseif (preg_match(self::SCAN_PATTERN_DECLARATION, $fusionLine)) {
+                $this->parseDeclaration($fusionLine);
+            } elseif (preg_match(self::SCAN_PATTERN_OBJECTDEFINITION, $fusionLine)) {
+                $this->parseObjectDefinition($fusionLine);
             } else {
-                throw new Fusion\Exception('Syntax error in line ' . $this->currentLineNumber . '. (' . $typoScriptLine . ')', 1180547966);
+                throw new Fusion\Exception('Syntax error in line ' . $this->currentLineNumber . '. (' . $fusionLine . ')', 1180547966);
             }
         }
     }
@@ -379,13 +413,13 @@ class Parser implements ParserInterface
     /**
      * Parses a line with comments or a line while parsing is in block comment mode.
      *
-     * @param string $typoScriptLine One line of TypoScript code
+     * @param string $fusionLine One line of Fusion code
      * @return void
      * @throws Fusion\Exception
      */
-    protected function parseComment($typoScriptLine)
+    protected function parseComment($fusionLine)
     {
-        if (preg_match(self::SPLIT_PATTERN_COMMENTTYPE, $typoScriptLine, $matches, PREG_OFFSET_CAPTURE) === 1) {
+        if (preg_match(self::SPLIT_PATTERN_COMMENTTYPE, $fusionLine, $matches, PREG_OFFSET_CAPTURE) === 1) {
             switch ($matches[1][0]) {
                 case '/*':
                     $this->currentBlockCommentState = true;
@@ -395,7 +429,7 @@ class Parser implements ParserInterface
                         throw new Fusion\Exception('Unexpected closing block comment without matching opening block comment.', 1180615119);
                     }
                     $this->currentBlockCommentState = false;
-                    $this->parseTypoScriptLine(substr($typoScriptLine, ($matches[1][1] + 2)));
+                    $this->parseFusionLine(substr($fusionLine, ($matches[1][1] + 2)));
                     break;
                 case '#':
                 case '//':
@@ -403,22 +437,22 @@ class Parser implements ParserInterface
                     break;
             }
         } elseif ($this->currentBlockCommentState === false) {
-            throw new Fusion\Exception('No comment type matched although the comment scan regex matched the TypoScript line (' . $typoScriptLine . ').', 1180614895);
+            throw new Fusion\Exception('No comment type matched although the comment scan regex matched the Fusion line (' . $fusionLine . ').', 1180614895);
         }
     }
 
     /**
      * Parses a line which opens or closes a confinement
      *
-     * @param string $typoScriptLine One line of TypoScript code
+     * @param string $fusionLine One line of Fusion code
      * @param boolean $isOpeningConfinement Set to TRUE, if an opening confinement is to be parsed and FALSE if it's a closing confinement.
      * @return void
      * @throws Fusion\Exception
      */
-    protected function parseConfinementBlock($typoScriptLine, $isOpeningConfinement)
+    protected function parseConfinementBlock($fusionLine, $isOpeningConfinement)
     {
         if ($isOpeningConfinement) {
-            $result = trim(trim(trim($typoScriptLine), '{'));
+            $result = trim(trim(trim($fusionLine), '{'));
             array_push($this->currentObjectPathStack, $this->getCurrentObjectPathPrefix() . $result);
         } else {
             if (count($this->currentObjectPathStack) < 1) {
@@ -431,15 +465,15 @@ class Parser implements ParserInterface
     /**
      * Parses a parser declaration of the form "declarationtype: declaration".
      *
-     * @param string $typoScriptLine One line of TypoScript code
+     * @param string $fusionLine One line of Fusion code
      * @return void
      * @throws Fusion\Exception
      */
-    protected function parseDeclaration($typoScriptLine)
+    protected function parseDeclaration($fusionLine)
     {
-        $result = preg_match(self::SPLIT_PATTERN_DECLARATION, $typoScriptLine, $matches);
+        $result = preg_match(self::SPLIT_PATTERN_DECLARATION, $fusionLine, $matches);
         if ($result !== 1 || !(isset($matches['declarationType']) && isset($matches['declaration']))) {
-            throw new Fusion\Exception('Invalid declaration "' . $typoScriptLine . '"', 1180544656);
+            throw new Fusion\Exception('Invalid declaration "' . $fusionLine . '"', 1180544656);
         }
 
         switch ($matches['declarationType']) {
@@ -455,15 +489,15 @@ class Parser implements ParserInterface
     /**
      * Parses an object definition.
      *
-     * @param string $typoScriptLine One line of TypoScript code
+     * @param string $fusionLine One line of Fusion code
      * @return void
      * @throws Fusion\Exception
      */
-    protected function parseObjectDefinition($typoScriptLine)
+    protected function parseObjectDefinition($fusionLine)
     {
-        $result = preg_match(self::SPLIT_PATTERN_OBJECTDEFINITION, $typoScriptLine, $matches);
+        $result = preg_match(self::SPLIT_PATTERN_OBJECTDEFINITION, $fusionLine, $matches);
         if ($result !== 1) {
-            throw new Fusion\Exception('Invalid object definition "' . $typoScriptLine . '"', 1180548488);
+            throw new Fusion\Exception('Invalid object definition "' . $fusionLine . '"', 1180548488);
         }
 
         $objectPath = $this->getCurrentObjectPathPrefix() . $matches['ObjectPath'];
@@ -530,19 +564,19 @@ class Parser implements ParserInterface
             // either source or target are a prototype definition
             if ($sourceIsPrototypeDefinition && $targetIsPrototypeDefinition && count($sourceObjectPathArray) === 2 && count($targetObjectPathArray) === 2) {
                 // both are a prototype definition and the path has length 2: this means
-                    // it must be of the form "prototype(Foo) < prototype(Bar)"
+                // it must be of the form "prototype(Foo) < prototype(Bar)"
                 $targetObjectPathArray[] = '__prototypeObjectName';
                 $this->setValueInObjectTree($targetObjectPathArray, end($sourceObjectPathArray));
             } elseif ($sourceIsPrototypeDefinition && $targetIsPrototypeDefinition) {
                 // Both are prototype definitions, but at least one is nested (f.e. foo.prototype(Bar))
-                    // Currently, it is not supported to override the prototypical inheritance in
-                    // parts of the TS rendering tree.
-                    // Although this might work conceptually, it makes reasoning about the prototypical
-                    // inheritance tree a lot more complex; that's why we forbid it right away.
+                // Currently, it is not supported to override the prototypical inheritance in
+                // parts of the TS rendering tree.
+                // Although this might work conceptually, it makes reasoning about the prototypical
+                // inheritance tree a lot more complex; that's why we forbid it right away.
                 throw new Fusion\Exception('Tried to parse "' . $targetObjectPath . '" < "' . $sourceObjectPath . '", however one of the sides is nested (e.g. foo.prototype(Bar)). Setting up prototype inheritance is only supported at the top level: prototype(Foo) < prototype(Bar)', 1358418019);
             } else {
                 // Either "source" or "target" are no prototypes. We do not support copying a
-                    // non-prototype value to a prototype value or vice-versa.
+                // non-prototype value to a prototype value or vice-versa.
                 throw new Fusion\Exception('Tried to parse "' . $targetObjectPath . '" < "' . $sourceObjectPath . '", however one of the sides is no prototype definition of the form prototype(Foo). It is only allowed to build inheritance chains with prototype objects.', 1358418015);
             }
         } else {
@@ -576,14 +610,19 @@ class Parser implements ParserInterface
      * Parse an include file. Currently, we start a new parser object; but we could as well re-use
      * the given one.
      *
-     * @param string $include The include value, for example " FooBar" or " resource://....". Can also include wildcard mask for TypoScript globbing.
+     * @param string $include The include value, for example " FooBar" or " resource://....". Can also include wildcard mask for Fusion globbing.
      * @return void
      * @throws Fusion\Exception
      */
     protected function parseInclude($include)
     {
         $include = trim($include);
-        $parser = clone $this;
+        $parser = new Parser();
+        // transfer current namespaces to new parser
+        foreach ($this->objectTypeNamespaces as $key => $objectTypeNamespace) {
+            $parser->setObjectTypeNamespace($key, $objectTypeNamespace);
+        }
+
         if (strpos($include, 'resource://') !== 0) {
             // Resolve relative paths
             if ($this->contextPathAndFilename !== null) {
@@ -618,7 +657,7 @@ class Parser implements ParserInterface
                     // Check if not trying to recursively include the current file via globbing
                     if (stat($pathAndFilename) !== stat($this->contextPathAndFilename)) {
                         if (!is_readable($pathAndFilename)) {
-                            throw new Fusion\Exception(sprintf('Could not include TypoScript file "%s"', $pathAndFilename), 1347977018);
+                            throw new Fusion\Exception(sprintf('Could not include Fusion file "%s"', $pathAndFilename), 1347977018);
                         }
                         $this->objectTree = $parser->parse(file_get_contents($pathAndFilename), $pathAndFilename, $this->objectTree, false);
                     }
@@ -626,7 +665,7 @@ class Parser implements ParserInterface
             }
         } else {
             if (!is_readable($include)) {
-                throw new Fusion\Exception(sprintf('Could not include TypoScript file "%s"', $include), 1347977017);
+                throw new Fusion\Exception(sprintf('Could not include Fusion file "%s"', $include), 1347977017);
             }
             $this->objectTree = $parser->parse(file_get_contents($include), $include, $this->objectTree, false);
         }
@@ -710,8 +749,8 @@ class Parser implements ParserInterface
             $processedValue = stripslashes(isset($matches['SingleQuoteValue']) ? $matches['SingleQuoteValue'] : $matches['DoubleQuoteValue']);
             $closingQuoteChar = isset($matches['SingleQuoteChar']) ? $matches['SingleQuoteChar'] : $matches['DoubleQuoteChar'];
             $regexp = '/(?P<Value>(?:\\\\.|[^\\\\' . $closingQuoteChar . '])*)(?P<QuoteChar>' . $closingQuoteChar . '?)/';
-            while (($typoScriptLine = $this->getNextTypoScriptLine()) !== false) {
-                preg_match($regexp, $typoScriptLine, $matches);
+            while (($fusionLine = $this->getNextFusionLine()) !== false) {
+                preg_match($regexp, $fusionLine, $matches);
                 $processedValue .= "\n" . stripslashes($matches['Value']);
                 if (!empty($matches['QuoteChar'])) {
                     break;
@@ -737,7 +776,7 @@ class Parser implements ParserInterface
             if (strpos($unparsedValue, '${') === 0) {
                 $eelExpressionSoFar = $unparsedValue;
                 // potential start of multiline Eel Expression; trying to consume next lines...
-                while (($line = $this->getNextTypoScriptLine()) !== false) {
+                while (($line = $this->getNextFusionLine()) !== false) {
                     $eelExpressionSoFar .= chr(10) . $line;
 
                     if (substr($line, -1) === '}') {
@@ -755,10 +794,51 @@ class Parser implements ParserInterface
                     // if the last line we consumed is FALSE, we have consumed the end of the file.
                     throw new Fusion\Exception('Syntax error: A multi-line Eel expression starting with "' . $unparsedValue . '" was not closed.', 1417616064);
                 }
+            }
+            // Trying to match multiline dsl-expressions
+            elseif (preg_match(self::SCAN_PATTERN_DSL_EXPRESSION_START, $unparsedValue)) {
+                $dslExpressionSoFar = $unparsedValue;
+                // potential start of multiline dsl-expression; trying to consume next lines...
+                while (true) {
+                    if (substr($dslExpressionSoFar, -1) === '`') {
+                        // potential end-of-dsl-expression marker
+                        $matches = array();
+                        if (preg_match(self::SPLIT_PATTERN_DSL_EXPRESSION, $dslExpressionSoFar, $matches) === 1) {
+                            $processedValue = $this->invokeAndParseDsl($matches['identifier'], $matches['code']);
+                            break;
+                        }
+                    }
+                    $line = $this->getNextTypoScriptLine();
+                    if ($line === false) {
+                        // if the last line we consumed is FALSE, we have consumed the end of the file.
+                        throw new Fusion\Exception('Syntax error: A multi-line dsl expression starting with "' . $unparsedValue . '" was not closed.', 1490714685);
+                    }
+                    $dslExpressionSoFar .= chr(10) . $line;
+                }
             } else {
                 throw new Fusion\Exception('Syntax error: Invalid value "' . $unparsedValue . '" in value assignment.', 1180604192);
             }
         }
+        return $processedValue;
+    }
+
+    /**
+     * @param string $identifier
+     * @param strung $$code
+     * @return mixed
+     */
+    protected function invokeAndParseDsl($identifier, $code)
+    {
+        $dslObject = $this->dslFactory->create($identifier);
+        $transpiledFusion = $dslObject->transpile($code);
+
+        $parser = new Parser();
+        // transfer current namespaces to new parser
+        foreach ($this->objectTypeNamespaces as $key => $objectTypeNamespace) {
+            $parser->setObjectTypeNamespace($key, $objectTypeNamespace);
+        }
+        $temporaryAst = $parser->parse('value = ' . $transpiledFusion);
+        $processedValue = $temporaryAst['value'];
         return $processedValue;
     }
 
@@ -777,8 +857,8 @@ class Parser implements ParserInterface
         }
 
         $currentKey = array_shift($objectPathArray);
-        if ((integer)$currentKey > 0) {
-            $currentKey = (integer)$currentKey;
+        if (is_numeric($currentKey)) {
+            $currentKey = (int)$currentKey;
         }
 
         if (empty($objectPathArray)) {
@@ -830,8 +910,8 @@ class Parser implements ParserInterface
 
         if (count($objectPathArray) > 0) {
             $currentKey = array_shift($objectPathArray);
-            if ((integer)$currentKey > 0) {
-                $currentKey = intval($currentKey);
+            if (is_numeric($currentKey)) {
+                $currentKey = (int)$currentKey;
             }
             if (!isset($objectTree[$currentKey])) {
                 $objectTree[$currentKey] = array();
@@ -859,6 +939,7 @@ class Parser implements ParserInterface
      * Precalculate merged configuration for inherited prototypes.
      *
      * @return void
+     * @throws Fusion\Exception
      */
     protected function buildPrototypeHierarchy()
     {
@@ -872,6 +953,9 @@ class Parser implements ParserInterface
             while (isset($this->objectTree['__prototypes'][$currentPrototypeName]['__prototypeObjectName'])) {
                 $currentPrototypeName = $this->objectTree['__prototypes'][$currentPrototypeName]['__prototypeObjectName'];
                 array_unshift($prototypeInheritanceHierarchy, $currentPrototypeName);
+                if ($prototypeName === $currentPrototypeName) {
+                    throw new Fusion\Exception(sprintf('Recursive inheritance found for prototype "%s". Prototype chain: %s', $prototypeName, implode(' < ', array_reverse($prototypeInheritanceHierarchy))), 1492801503);
+                }
             }
 
             if (count($prototypeInheritanceHierarchy)) {

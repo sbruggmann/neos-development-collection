@@ -51,15 +51,14 @@ class ThumbnailConfiguration
     protected $allowUpScaling;
 
     /**
+     * @var integer
+     */
+    protected $quality;
+
+    /**
      * @var boolean
      */
     protected $async;
-
-    /**
-     * @Flow\InjectConfiguration("behaviourFlag")
-     * @var string
-     */
-    protected $behaviourFlag;
 
     /**
      * @Flow\Inject
@@ -79,9 +78,10 @@ class ThumbnailConfiguration
      * @param integer $maximumHeight Desired maximum height of the image
      * @param boolean $allowCropping Whether the image should be cropped if the given sizes would hurt the aspect ratio
      * @param boolean $allowUpScaling Whether the resulting image size might exceed the size of the original image
+     * @param integer $quality Quality of the processed image
      * @param boolean $async Whether the thumbnail can be generated asynchronously
      */
-    public function __construct($width = null, $maximumWidth = null, $height = null, $maximumHeight = null, $allowCropping = false, $allowUpScaling = false, $async = false)
+    public function __construct($width = null, $maximumWidth = null, $height = null, $maximumHeight = null, $allowCropping = false, $allowUpScaling = false, $async = false, $quality = null)
     {
         $this->width = $width ? (integer)$width : null;
         $this->maximumWidth = $maximumWidth ? (integer)$maximumWidth : null;
@@ -89,6 +89,7 @@ class ThumbnailConfiguration
         $this->maximumHeight = $maximumHeight ? (integer)$maximumHeight : null;
         $this->allowCropping = $allowCropping ? (boolean)$allowCropping : false;
         $this->allowUpScaling = $allowUpScaling ? (boolean)$allowUpScaling : false;
+        $this->quality = $quality ? (integer)$quality : null;
         $this->async = $async ? (boolean)$async : false;
     }
 
@@ -97,17 +98,7 @@ class ThumbnailConfiguration
      */
     public function getWidth()
     {
-        if ($this->width !== null) {
-            return $this->width;
-        }
-        if ($this->behaviourFlag === '1.2') {
-            // @deprecated since 2.0, simulate the behaviour of 1.2
-            if ($this->height === null && $this->isCroppingAllowed() && $this->getMaximumWidth() !== null && $this->getMaximumHeight() !== null) {
-                $this->logDeprecation();
-                return $this->getMaximumWidth();
-            }
-        }
-        return null;
+        return $this->width;
     }
 
     /**
@@ -123,17 +114,7 @@ class ThumbnailConfiguration
      */
     public function getHeight()
     {
-        if ($this->height !== null) {
-            return $this->height;
-        }
-        if ($this->behaviourFlag === '1.2') {
-            // @deprecated since 2.0, simulate the behaviour of 1.2
-            if ($this->width === null && $this->isCroppingAllowed() && $this->getMaximumWidth() !== null && $this->getMaximumHeight() !== null) {
-                $this->logDeprecation();
-                return $this->getMaximumHeight();
-            }
-        }
-        return null;
+        return $this->height;
     }
 
     /**
@@ -185,6 +166,14 @@ class ThumbnailConfiguration
     }
 
     /**
+     * @return int
+     */
+    public function getQuality()
+    {
+        return $this->quality;
+    }
+
+    /**
      * @return array
      */
     public function toArray()
@@ -195,25 +184,12 @@ class ThumbnailConfiguration
             'height' => $this->getHeight(),
             'maximumHeight' => $this->getMaximumHeight(),
             'ratioMode' => $this->getRatioMode(),
-            'allowUpScaling' => $this->isUpScalingAllowed()
+            'allowUpScaling' => $this->isUpScalingAllowed(),
+            'quality' => $this->getQuality()
         ], function ($value) {
             return $value !== null;
         });
         ksort($data);
         return $data;
-    }
-
-    /**
-     * Log a deprecation message once
-     *
-     * @return void
-     */
-    protected function logDeprecation()
-    {
-        if (!static::$loggedDeprecation) {
-            static::$loggedDeprecation = true;
-            $this->logger->log('Neos.Media is configured to simulate the deprecated Neos 1.2 behaviour. Please check the setting "Neos.Media.behaviourFlag".',
-                LOG_DEBUG);
-        }
     }
 }

@@ -3,7 +3,7 @@ Rendering a Meta-Navigation
 ===========================
 
 To render a meta navigation (ex: footer navigation)
-in Neos all you need to use is TypoScript and
+in Neos all you need to use is Fusion and
 HTML.
 
 A common fact is that most sites have footer where all
@@ -11,16 +11,16 @@ pages are using the same content or information. So a
 common issue is how to solve this in the best possible
 way.
 
-VendorName.VendorSite/Resources/Private/TypoScripts/Library/Root.fusion
+VendorName.VendorSite/Resources/Private/Fusion/Root.fusion
 
-TypoScript code::
+Fusion code::
 
     page.body {
         metaMenu = Menu
         metaMenu {
             entryLevel = 2
             templatePath = 'resource://VendorName.VendorSite/Private
-            /Templates/TypoScriptObjects/MetaMenu.html'
+            /Templates/FusionObjects/MetaMenu.html'
             maximumLevels = 1
             startingPoint = ${q(site).children('[uriPathSegment="metamenu"]').get(0)}
         }
@@ -59,7 +59,7 @@ Viewhelper include::
 
     {namespace neos=Neos\Neos\ViewHelpers}
 
-The next thing is to iterate through the nodes found by TypoScript.
+The next thing is to iterate through the nodes found by Fusion.
 
 Iterating through nodes::
 

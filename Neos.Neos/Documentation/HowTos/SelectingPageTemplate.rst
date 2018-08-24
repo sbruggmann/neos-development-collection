@@ -6,7 +6,7 @@ Neos has a flexible way of choosing a layout, which can be selected in the backe
 
 First of all, the necessary layouts have to be configured inside `VendorName.VendorSite/Configuration/NodeTypes.yaml`::
 
-    'Neos.Neos.NodeTypes:Page':
+    'Neos.NodeTypes:Page':
       properties:
         layout:
           ui:
@@ -39,8 +39,8 @@ Here, the properties `layout` and `subpageLayout` are configured inside `Neos.Ne
     Notice that the group is set for both properties as well, because they're hidden by default.
 
 
-When all this is done we need to bind the layout to a rendering and this is done in TypoScript,
-f.e. in VendorName.VendorSite/Resources/Private/TypoScripts/Library/Root.ts::
+When all this is done we need to bind the layout to a rendering and this is done in Fusion,
+f.e. in VendorName.VendorSite/Resources/Private/Fusion/Root.ts::
 
     page.body {
         // standard "Page" configuration
@@ -53,38 +53,38 @@ f.e. in VendorName.VendorSite/Resources/Private/TypoScripts/Library/Root.ts::
         templatePath = 'resource://VendorName.VendorSite/Private/Templates/Page/LandingPage.html'
     }
 
-If a page layout was chosen, that is the TypoScript object path where rendering starts.
+If a page layout was chosen, that is the Fusion object path where rendering starts.
 For example, if the `landingPage` was chosen, a different template can be used.
 
 The implementation internal of the layout rendering can be found in the file:
 
-Neos.Neos/Resources/Private/TypoScript/DefaultTypoScript.fusion
+Neos.Neos/Resources/Private/Fusion/DefaultFusion.fusion
 
 The element `root.layout` is the one responsible for handling the layout. So when trying to
-change the layout handling this is the TypoScript object to manipulate.
+change the layout handling this is the Fusion object to manipulate.
 
 Select Template based on NodeType
 =================================
 
 It is also possible to select the page rendering configuration based on the node type of the
-page. Let's say you have a node type named `VendorName.VendorSite:Employee` which has `Neos.Neos.NodeTypes:Page`
+page. Let's say you have a node type named `VendorName.VendorSite:Employee` which has `Neos.NodeTypes:Page`
 as a supertype. This node type is used for displaying a personal page of employees working in
 your company. This page will have a different structure compared to your basic page.
 
-The right approach would be to create a TypoScript prototype for your default page and employee page like::
+The right approach would be to create a Fusion prototype for your default page and employee page like::
 
     prototype(VendorName.VendorSite:Page) < prototype(Neos.Neos:Page) {
-        body.templatePath = 'resource//VendorName.VendorSite/Private/Templates/Page/Default.html'
+        body.templatePath = 'resource://VendorName.VendorSite/Private/Templates/Page/Default.html'
         # Your further page configuration here
     }
 
     prototype(VendorName.VendorSite:EmployeePage) < prototype(VendorName.VendorSite:Page) {
-        body.templatePath = 'resource//VendorName.VendorSite/Private/Templates/Page/Employee.html'
+        body.templatePath = 'resource://VendorName.VendorSite/Private/Templates/Page/Employee.html'
         # Your further employee page configuration here
     }
 
-But now how to link this TypoScript path to your node type? For this we can have a look at the
-TypoScript `root` path. This `root` path is a `TYPO3.TypoScript:Case` object, which will render
+But now how to link this Fusion path to your node type? For this we can have a look at the
+Fusion `root` path. This `root` path is a `Neos.Fusion:Case` object, which will render
 the `/page` path by default. But you can add your own conditions to render a different path.
 
 In our case we will add a condition on the first position of the condition::
@@ -97,7 +97,7 @@ In our case we will add a condition on the first position of the condition::
     page = VendorName.VendorSite:Page
     employeePage = VendorName.VendorSite:EmployeePage
 
-This will now render the `employeePage` TypoScript path if a page of type `VendorName.VendorSite:Employee`
+This will now render the `employeePage` Fusion path if a page of type `VendorName.VendorSite:Employee`
 is rendered on your website.
 
 Using a `DefaultPage` Prototype
@@ -121,34 +121,34 @@ Your basic `DefaultPage` prototype could look something like this::
     prototype(VendorName:DefaultPage) < prototype(Page) {
         head {
             stylesheets {
-                site = TYPO3.TypoScript:Template {
-                    templatePath = 'resource//VendorName.VendorSite/Private/Templates/Includes/InlineStyles.html'
+                site = Neos.Fusion:Template {
+                    templatePath = 'resource://VendorName.VendorSite/Private/Templates/Includes/InlineStyles.html'
                     sectionName = 'stylesheets'
                 }
 
-                mainStyle  = TYPO3.TypoScript:Tag {
+                mainStyle  = Neos.Fusion:Tag {
                     tagName = 'link'
                     attributes {
                         rel = 'stylesheet'
-                        href = TYPO3.TypoScript:ResourceUri {
-                            path = 'resource//VendorName.VendorSite/Public/Styles/Styles.css'
+                        href = Neos.Fusion:ResourceUri {
+                            path = 'resource://VendorName.VendorSite/Public/Styles/Styles.css'
                         }
                     }
                 }
             }
         }
         body {
-            templatePath = 'resource//VendorName.VendorSite/Private/Templates/Page/Default.html'
+            templatePath = 'resource://VendorName.VendorSite/Private/Templates/Page/Default.html'
             sectionName = 'body'
         }
     }
 
-Now we define our basic prototype for all `Neos.Neos.NodeTypes:Page` nodes.
-Since we extend `VendorName:DefaultPage` here, we can only define custom needs for `Neos.Neos.NodeTypes:Page` node types.
+Now we define our basic prototype for all `Neos.NodeTypes:Page` nodes.
+Since we extend `VendorName:DefaultPage` here, we can only define custom needs for `Neos.NodeTypes:Page` node types.
 
 For example::
 
-    prototype(Neos.Neos.NodeTypes:Page.Document) < prototype(VendorName:DefaultPage) {
+    prototype(Neos.NodeTypes:Page.Document) < prototype(VendorName:DefaultPage) {
         body {
             content {
                 main = PrimaryContent {
@@ -166,6 +166,6 @@ All our custom document node types will be defined like this::
 
 In case we have a `layout` property within our node type configuration, we can define a prototype for this case too::
 
-    customLayout = Neos.Neos.NodeTypes:Page.Document {
+    customLayout = Neos.NodeTypes:Page.Document {
        # custom properties for your node type
     }

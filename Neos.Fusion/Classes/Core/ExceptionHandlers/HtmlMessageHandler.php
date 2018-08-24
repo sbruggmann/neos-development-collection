@@ -26,36 +26,44 @@ class HtmlMessageHandler extends AbstractRenderingExceptionHandler
     protected $systemLogger;
 
     /**
+     * Whether or not to render technical details (i.e. the Fusion stacktrace) in the exception message
+     *
+     * @var bool
+     */
+    private $renderTechnicalDetails;
+
+    /**
+     * @param bool $renderTechnicalDetails whether or not to render technical details (i.e. the Fusion stacktrace) in the exception message
+     */
+    public function __construct(bool $renderTechnicalDetails = true)
+    {
+        $this->renderTechnicalDetails = $renderTechnicalDetails;
+    }
+
+    /**
      * Renders the exception in HTML for display
      *
-     * @param string $typoScriptPath path causing the exception
+     * @param string $fusionPath path causing the exception
      * @param \Exception $exception exception to handle
      * @param integer $referenceCode
      * @return string
      */
-    protected function handle($typoScriptPath, \Exception $exception, $referenceCode)
+    protected function handle($fusionPath, \Exception $exception, $referenceCode)
     {
-        $messageArray = array(
-            'header' => 'An exception was thrown while Neos tried to render your page',
-            'content' => htmlspecialchars($exception->getMessage()),
-            'stacktrace' => $this->formatTypoScriptPath($typoScriptPath),
-            'referenceCode' => $this->formatErrorCodeMessage($referenceCode)
-        );
+        $messageBody = sprintf('<p class="neos-message-content">%s</p>', htmlspecialchars($exception->getMessage()));
 
-        $messageBody = sprintf(
-            '<p class="neos-message-content">%s</p>' .
-            '<p class="neos-message-stacktrace"><code>%s</code></p>',
-            $messageArray['content'], $messageArray['stacktrace']
-        );
+        if ($this->renderTechnicalDetails) {
+            $messageBody .= sprintf('<p class="neos-message-stacktrace"><code>%s</code></p>', $this->formatFusionPath($fusionPath));
+        }
 
         if ($referenceCode) {
-            $messageBody = sprintf('%s<p class="neos-reference-code">%s</p>', $messageBody, $messageArray['referenceCode']);
+            $messageBody .= sprintf('<p class="neos-reference-code">%s</p>', $this->formatErrorCodeMessage($referenceCode));
         }
 
         $message = sprintf(
-            '<div class="neos-message-header"><div class="neos-message-icon"><i class="icon-warning-sign"></i></div><h1>%s</h1></div>' .
+            '<div class="neos-message-header"><div class="neos-message-icon"><i class="icon-warning-sign"></i></div><h1>An exception was thrown while Neos tried to render your page</h1></div>' .
             '<div class="neos-message-wrapper">%s</div>',
-            $messageArray['header'], $messageBody
+            $messageBody
         );
 
         $this->systemLogger->logException($exception);
@@ -75,7 +83,7 @@ class HtmlMessageHandler extends AbstractRenderingExceptionHandler
     }
 
     /**
-     * Renders an indented multi-line stack-trace for the given TypoScript path.
+     * Renders an indented multi-line stack-trace for the given Fusion path.
      *
      * example:
      *
@@ -87,14 +95,14 @@ class HtmlMessageHandler extends AbstractRenderingExceptionHandler
      *      body<Neos.Fusion:Template>/
      *       content/
      *
-     * @param string $typoScriptPath
-     * @return string Multi-line stack trace for the given TypoScript path
+     * @param string $fusionPath
+     * @return string Multi-line stack trace for the given Fusion path
      */
-    protected function formatTypoScriptPath($typoScriptPath)
+    protected function formatFusionPath($fusionPath)
     {
         $pathSegments = array();
         $spacer = '';
-        foreach (explode('/', $typoScriptPath) as $segment) {
+        foreach (explode('/', $fusionPath) as $segment) {
             $pathSegments[] = $spacer . $segment . '/';
             $spacer .= ' ';
         }

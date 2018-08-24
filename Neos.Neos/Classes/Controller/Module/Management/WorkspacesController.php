@@ -19,10 +19,10 @@ use Neos\Error\Messages\Message;
 use Neos\Flow\I18n\Translator;
 use Neos\Flow\Mvc\ActionRequest;
 use Neos\Flow\Property\PropertyMapper;
-use Neos\Flow\Property\PropertyMappingConfigurationBuilder;
 use Neos\Flow\Property\TypeConverter\PersistentObjectConverter;
 use Neos\Flow\Security\Context;
 use Neos\Media\Domain\Model\AssetInterface;
+use Neos\Media\Domain\Model\ImageInterface;
 use Neos\Neos\Controller\Module\AbstractModuleController;
 use Neos\Neos\Domain\Model\User;
 use Neos\Neos\Domain\Repository\SiteRepository;
@@ -82,12 +82,6 @@ class WorkspacesController extends AbstractModuleController
      * @var ContentContextFactory
      */
     protected $contextFactory;
-
-    /**
-     * @Flow\Inject
-     * @var PropertyMappingConfigurationBuilder
-     */
-    protected $propertyMappingConfigurationBuilder;
 
     /**
      * @Flow\Inject
@@ -384,7 +378,7 @@ class WorkspacesController extends AbstractModuleController
      */
     public function publishOrDiscardNodesAction(array $nodes, $action, Workspace $selectedWorkspace = null)
     {
-        $propertyMappingConfiguration = $this->propertyMappingConfigurationBuilder->build();
+        $propertyMappingConfiguration = $this->propertyMapper->buildPropertyMappingConfiguration();
         $propertyMappingConfiguration->setTypeConverterOption(NodeConverter::class, NodeConverter::REMOVED_CONTENT_SHOWN, true);
         foreach ($nodes as $key => $node) {
             $nodes[$key] = $this->propertyMapper->convert($node, NodeInterface::class, $propertyMappingConfiguration);
@@ -475,7 +469,8 @@ class WorkspacesController extends AbstractModuleController
         $siteChanges = [];
         foreach ($this->publishingService->getUnpublishedNodes($selectedWorkspace) as $node) {
             /** @var NodeInterface $node */
-            if (!$node->getNodeType()->isOfType('Neos.Neos:ContentCollection')) {
+            $skipCollectionChanges = $node->getNodeType()->isOfType('Neos.Neos:ContentCollection') && !$node->getNodeType()->isOfType('Neos.Neos:Content');
+            if (!$skipCollectionChanges) {
                 $pathParts = explode('/', $node->getPath());
                 if (count($pathParts) > 2) {
                     $siteNodeName = $pathParts[2];
@@ -493,7 +488,7 @@ class WorkspacesController extends AbstractModuleController
 
                         $change = [
                             'node' => $node,
-                            'contentChanges' => $this->renderContentChanges($node),
+                            'contentChanges' => $this->renderContentChanges($node)
                         ];
                         if ($node->getNodeType()->isOfType('Neos.Neos:Node')) {
                             $change['configuration'] = $node->getNodeType()->getFullConfiguration();
@@ -582,6 +577,18 @@ class WorkspacesController extends AbstractModuleController
                         'diff' => $diffArray
                     ];
                 }
+                // The && in belows condition is on purpose as creating a thumbnail for comparison only works if actually
+                // BOTH are ImageInterface (or NULL).
+            } elseif (
+                ($originalPropertyValue instanceof ImageInterface || $originalPropertyValue === null)
+                && ($changedPropertyValue instanceof ImageInterface || $changedPropertyValue === null)
+            ) {
+                $contentChanges[$propertyName] = [
+                    'type' => 'image',
+                    'propertyLabel' => $this->getPropertyLabel($propertyName, $changedNode),
+                    'original' => $originalPropertyValue,
+                    'changed' => $changedPropertyValue
+                ];
             } elseif ($originalPropertyValue instanceof AssetInterface || $changedPropertyValue instanceof AssetInterface) {
                 $contentChanges[$propertyName] = [
                     'type' => 'asset',
@@ -589,8 +596,14 @@ class WorkspacesController extends AbstractModuleController
                     'original' => $originalPropertyValue,
                     'changed' => $changedPropertyValue
                 ];
-            } elseif ($originalPropertyValue instanceof \DateTime && $changedPropertyValue instanceof \DateTime) {
-                if ($changedPropertyValue->getTimestamp() !== $originalPropertyValue->getTimestamp()) {
+            } elseif ($originalPropertyValue instanceof \DateTime || $changedPropertyValue instanceof \DateTime) {
+                $changed = false;
+                if (!$changedPropertyValue instanceof \DateTime || !$originalPropertyValue instanceof \DateTime) {
+                    $changed = true;
+                } elseif ($changedPropertyValue->getTimestamp() !== $originalPropertyValue->getTimestamp()) {
+                    $changed = true;
+                }
+                if ($changed) {
                     $contentChanges[$propertyName] = [
                         'type' => 'datetime',
                         'propertyLabel' => $this->getPropertyLabel($propertyName, $changedNode),

@@ -11,13 +11,12 @@ namespace Neos\Neos\Fusion;
  * source code.
  */
 
-use Neos\Flow\Annotations as Flow;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\Fusion\Exception as TypoScriptException;
+use Neos\Fusion\Exception as FusionException;
 use Neos\Fusion\Exception;
 
 /**
- * A TypoScript Menu object
+ * A Fusion Menu object
  */
 class MenuImplementation extends AbstractMenuImplementation
 {
@@ -62,7 +61,7 @@ class MenuImplementation extends AbstractMenuImplementation
      */
     public function getEntryLevel()
     {
-        return $this->tsValue('entryLevel');
+        return $this->fusionValue('entryLevel');
     }
 
     /**
@@ -72,7 +71,7 @@ class MenuImplementation extends AbstractMenuImplementation
      */
     public function getFilter()
     {
-        $filter = $this->tsValue('filter');
+        $filter = $this->fusionValue('filter');
         if ($filter === null) {
             $filter = 'Neos.Neos:Document';
         }
@@ -87,7 +86,7 @@ class MenuImplementation extends AbstractMenuImplementation
     public function getMaximumLevels()
     {
         if ($this->maximumLevels === null) {
-            $this->maximumLevels = $this->tsValue('maximumLevels');
+            $this->maximumLevels = $this->fusionValue('maximumLevels');
             if ($this->maximumLevels > self::MAXIMUM_LEVELS_LIMIT) {
                 $this->maximumLevels = self::MAXIMUM_LEVELS_LIMIT;
             }
@@ -104,7 +103,7 @@ class MenuImplementation extends AbstractMenuImplementation
     public function getLastLevel()
     {
         if ($this->lastLevel === null) {
-            $this->lastLevel = $this->tsValue('lastLevel');
+            $this->lastLevel = $this->fusionValue('lastLevel');
             if ($this->lastLevel > self::MAXIMUM_LEVELS_LIMIT) {
                 $this->lastLevel = self::MAXIMUM_LEVELS_LIMIT;
             }
@@ -119,7 +118,7 @@ class MenuImplementation extends AbstractMenuImplementation
     public function getStartingPoint()
     {
         if ($this->startingPoint === null) {
-            $this->startingPoint = $this->tsValue('startingPoint');
+            $this->startingPoint = $this->fusionValue('startingPoint');
         }
 
         return $this->startingPoint;
@@ -130,14 +129,14 @@ class MenuImplementation extends AbstractMenuImplementation
      */
     public function getItemCollection()
     {
-        return $this->tsValue('itemCollection');
+        return $this->fusionValue('itemCollection');
     }
 
     /**
      * Builds the array of menu items containing those items which match the
      * configuration set for this Menu object.
      *
-     * @throws TypoScriptException
+     * @throws FusionException
      * @return array An array of menu items and further information
      */
     protected function buildItems()
@@ -210,7 +209,7 @@ class MenuImplementation extends AbstractMenuImplementation
     /**
      * Find the starting point for this menu. depending on given startingPoint
      * If startingPoint is given, this is taken as starting point for this menu level,
-     * as a fallback the TypoScript context variable node is used.
+     * as a fallback the Fusion context variable node is used.
      *
      * If entryLevel is configured this will be taken into account as well.
      *
@@ -219,13 +218,13 @@ class MenuImplementation extends AbstractMenuImplementation
      */
     protected function findMenuStartingPoint()
     {
-        $typoScriptContext = $this->tsRuntime->getCurrentContext();
+        $fusionContext = $this->runtime->getCurrentContext();
         $startingPoint = $this->getStartingPoint();
 
-        if (!isset($typoScriptContext['node']) && !$startingPoint) {
-            throw new TypoScriptException('You must either set a "startingPoint" for the menu or "node" must be set in the TypoScript context.', 1369596980);
+        if (!isset($fusionContext['node']) && !$startingPoint) {
+            throw new FusionException('You must either set a "startingPoint" for the menu or "node" must be set in the Fusion context.', 1369596980);
         }
-        $startingPoint = $startingPoint ? : $typoScriptContext['node'];
+        $startingPoint = $startingPoint ? : $fusionContext['node'];
         $entryParentNode = $this->findParentNodeInBreadcrumbPathByLevel($this->getEntryLevel(), $startingPoint);
 
         return $entryParentNode;

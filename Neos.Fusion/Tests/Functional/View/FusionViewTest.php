@@ -19,7 +19,7 @@ use Neos\Flow\Tests\FunctionalTestCase;
 use Neos\Fusion\View\FusionView;
 
 /**
- * Testcase for the TypoScript View
+ * Testcase for the Fusion View
  *
  */
 class FusionViewTest extends FunctionalTestCase
@@ -46,7 +46,7 @@ class FusionViewTest extends FunctionalTestCase
     /**
      * @test
      */
-    public function typoScriptViewIsUsedForRendering()
+    public function fusionViewIsUsedForRendering()
     {
         $view = $this->buildView('Foo\Bar\Controller\TestController', 'index');
         $this->assertEquals('X', $view->render());
@@ -55,17 +55,17 @@ class FusionViewTest extends FunctionalTestCase
     /**
      * @test
      */
-    public function typoScriptViewUsesGivenPathIfSet()
+    public function fusionViewUsesGivenPathIfSet()
     {
         $view = $this->buildView('Foo\Bar\Controller\TestController', 'index');
-        $view->setTypoScriptPath('foo/bar');
+        $view->setFusionPath('foo/bar');
         $this->assertEquals('Xfoobar', $view->render());
     }
 
     /**
      * @test
      */
-    public function ifNoTypoScriptViewIsFoundThenFallbackViewIsExecuted()
+    public function ifNoFusionViewIsFoundThenFallbackViewIsExecuted()
     {
         $view = $this->buildView('Foo\Bar\Controller\TestController', 'nonExisting');
         $this->mockFallbackView->expects($this->once())->method('render')->will($this->returnValue('FallbackView called'));
@@ -77,7 +77,7 @@ class FusionViewTest extends FunctionalTestCase
     /**
      * @test
      */
-    public function typoScriptViewOutputsVariable()
+    public function fusionViewOutputsVariable()
     {
         $view = $this->buildView('Foo\Bar\Controller\TestController', 'index');
         $view->assign('test', 'Hallo Welt');
@@ -85,7 +85,7 @@ class FusionViewTest extends FunctionalTestCase
     }
 
     /**
-     * Prepare a TypoScriptView for testing that Mocks a request with the given controller and action names.
+     * Prepare a FusionView for testing that Mocks a request with the given controller and action names.
      *
      * @param string $controllerObjectName
      * @param string $controllerActionName
@@ -101,7 +101,7 @@ class FusionViewTest extends FunctionalTestCase
         $view = new FusionView();
         $view->setControllerContext($this->mockControllerContext);
         $this->inject($view, 'fallbackView', $this->mockFallbackView);
-        $view->setTypoScriptPathPattern(__DIR__ . '/Fixtures/TypoScript');
+        $view->setFusionPathPattern(__DIR__ . '/Fixtures/Fusion');
 
         return $view;
     }

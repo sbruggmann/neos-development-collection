@@ -3,7 +3,7 @@
 Node Type Definition
 ====================
 
-Each TYPO3CR Node (we'll just call it Node in the remaining text) has a specific
+Each Neos ContentRepository Node (we'll just call it Node in the remaining text) has a specific
 *node type*. Node Types can be defined in any package by declaring them in
 ``Configuration/NodeTypes.yaml``.
 
@@ -46,10 +46,10 @@ The following options are allowed:
   - Recursive copying only happens *inside* this aggregate, and stops at nested aggregates.
 
   The most prominent *aggregate* is `Neos.Neos:Document` and everything which inherits from it, like
-  `Neos.Neos.NodeTypes:Page`.
+  `Neos.NodeTypes:Page`.
 
 ``superTypes``
-  An array of parent node types inherited from as keys with a boolean values.::
+  An array of parent node types as keys with a boolean value::
 
     'Neos.Neos:Document':
       superTypes:
@@ -67,9 +67,9 @@ The following options are allowed:
     constraints:
       nodeTypes:
         # ALLOW text, DISALLOW Image
-        'Neos.Neos.NodeTypes:Text': true
-        'Neos.Neos.NodeTypes:Image': false
-        # DISALLOW as Fallback (for not-explicitely-listed node types)
+        'Neos.NodeTypes:Text': true
+        'Neos.NodeTypes:Image': false
+        # DISALLOW as Fallback (for not-explicitly-listed node types)
         '*': false
 
 ``childNodes``
@@ -84,13 +84,13 @@ The following options are allowed:
         constraints:
           nodeTypes:
             # only allow images in this ContentCollection
-            'Neos.Neos.NodeTypes:Image': true
+            'Neos.NodeTypes:Image': true
             '*': false
 
   By using ``position``, it is possible to define the order in which child nodes appear in the structure tree.
   An example may look like::
 
-    'Neos.Neos.NodeTypes:Page':
+    'Neos.NodeTypes:Page':
       childNodes:
         'someChild':
           type: 'Neos.Neos:ContentCollection'
@@ -98,8 +98,8 @@ The following options are allowed:
 
   This adds a new ContentCollection called someChild to the default page.
   It will be positioned before the main ContentCollection that the default page has.
-  The position setting follows the same sorting logic used in TypoScript
-  (see the :ref:`neos-typoscript-reference`).
+  The position setting follows the same sorting logic used in Fusion
+  (see the :ref:`neos-fusion-reference`).
 
 ``label``
   When displaying a node inside the Neos UI (e.g. tree view, link editor, workspace module) the ``label`` option will
@@ -117,7 +117,7 @@ The following options are allowed:
 
   ``generatorClass``
     Alternatively the class of a node label generator implementing
-    ``TYPO3\TYPO3CR\Domain\Model\NodeLabelGeneratorInterface`` can be specified as a nested option.
+    ``Neos\ContentRepository\Domain\Model\NodeLabelGeneratorInterface`` can be specified as a nested option.
 
 ``options``
   Options for third party-code, the Content-Repository ignores those options but Neos or Packages may use this to adjust
@@ -135,20 +135,20 @@ The following options are allowed:
       If ``options.fusion.prototypeGenerator`` is set to ``null`` no prototype is created for this type.
 
       By default Neos has generators for all nodes of type ``Neos.Neos:Node`` and creates protoypes based on
-      ``TYPO3.TypoScript:Template``. A template path is assumed based on the package-prefix and the nodetype-name. All properties
+      ``Neos.Fusion:Template``. A template path is assumed based on the package-prefix and the nodetype-name. All properties
       of the node are passed to the template. For the nodeTypes of type ``Neos.Neos:Document``, ``Neos.Neos:Content`` and
       ``Neos.Neos:Plugin`` the corresponding prototype is used as base-prototype.
 
       Example::
 
-      prototype(Vendor.Site:Content.SpecialNodeType) < prototype(TYPO3.TypoScript:Content) {
-        templatePath = 'resource://Vendor.Site/Private/Templates/NodeTypes/Content.SpecialNodeType.html'
-        # all properties of the nodeType are passed to the template
-        date = ${q(node).property('date')}
-        # inline-editable strings additionally get the convertUris processor
-        title = ${q(node).property('title')}
-        title.@process.convertUris = Neos.Neos:ConvertUris
-      }
+        prototype(Vendor.Site:Content.SpecialNodeType) < prototype(Neos.Fusion:Content) {
+          templatePath = 'resource://Vendor.Site/Private/Templates/NodeTypes/Content.SpecialNodeType.html'
+          # all properties of the nodeType are passed to the template
+          date = ${q(node).property('date')}
+          # inline-editable strings additionally get the convertUris processor
+          title = ${q(node).property('title')}
+          title.@process.convertUris = Neos.Neos:ConvertUris
+        }
 
 ``ui``
   Configuration options related to the user interface representation of the node type
@@ -167,9 +167,9 @@ The following options are allowed:
     Small numbers are sorted on top.
 
   ``icon``
-    This setting define the icon to use in the Neos UI for the node type
+    This setting defines the icon that the Neos UI will use to display the node type.
 
-    Currently it's only possible to use a predefined selection of icons, which
+    Currently it is only possible to use a predefined selection of icons, which
     are available in Font Awesome http://fortawesome.github.io/Font-Awesome/3.2.1/icons/.
 
   ``help``
@@ -188,7 +188,7 @@ The following options are allowed:
 
       If the ``thumbnail`` setting is undefined but an image matching the nodetype name
        is found, it will be used automatically. It will be looked for in
-       ``<packageKey>/Resources/Public/Images/NodeTypes/<nodeTypeName>.png`` with
+       ``<packageKey>/Resources/Public/NodeTypes/Thumbnails/<nodeTypeName>.png`` with
        ``packageKey`` and ``nodeTypeName`` being extracted from the full nodetype name
        like this:
 
@@ -238,7 +238,8 @@ The following options are allowed:
 
       ``collapsed``
         If the group should be collapsed by default (true or false). If left empty, the group will be expanded.
-
+  ``creationDialog``
+    Creation dialog elements configuration. See :ref:`node-creation-dialog` for more details.
 ``properties``
   A list of named properties for this node type. For each property the following settings are available.
 
@@ -369,7 +370,7 @@ The following options are allowed:
 
 Here is one of the standard Neos node types (slightly shortened)::
 
-	'Neos.Neos.NodeTypes:Image':
+	'Neos.NodeTypes:Image':
 	  superTypes:
 	    'Neos.Neos:Content': true
 	  ui:
@@ -383,7 +384,7 @@ Here is one of the standard Neos node types (slightly shortened)::
 	          position: 5
 	  properties:
 	    image:
-	      type: TYPO3\Media\Domain\Model\ImageInterface
+	      type: Neos\Media\Domain\Model\ImageInterface
 	      ui:
 	        label: 'Image'
 	        reloadIfChanged: true

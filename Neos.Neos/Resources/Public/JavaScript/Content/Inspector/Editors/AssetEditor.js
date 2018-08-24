@@ -8,9 +8,10 @@ define(
 	'Shared/Utility',
 	'Shared/HttpClient',
 	'Shared/I18n',
-	'Library/sortable/Sortable'
+	'Library/sortable/Sortable',
+	'Shared/Configuration'
 ],
-function(Ember, $, FileUpload, template, SecondaryInspectorController, Utility, HttpClient, I18n, Sortable) {
+function(Ember, $, FileUpload, template, SecondaryInspectorController, Utility, HttpClient, I18n, Sortable, Configuration) {
 
 	return FileUpload.extend({
 		removeButtonLabel: function() {
@@ -25,6 +26,14 @@ function(Ember, $, FileUpload, template, SecondaryInspectorController, Utility, 
 		 */
 		multiple: false,
 
+		/**
+		 * Feature flags for this editor
+		 */
+		features: {
+			upload: true,
+			mediaBrowser: true
+		},
+
 		_assetMetadataEndpointUri: null,
 
 		_showLoadingIndicator: false,
@@ -37,8 +46,8 @@ function(Ember, $, FileUpload, template, SecondaryInspectorController, Utility, 
 				template: Ember.Handlebars.compile('<iframe style="width:100%; height: 100%" src="' + $('link[rel="neos-media-browser"]').attr('href') + '"></iframe>'),
 				didInsertElement: function() {
 					this.$().find('iframe').on('load', function(event) {
-						if (window.Typo3MediaBrowserCallbacks && window.Typo3MediaBrowserCallbacks.onLoad) {
-							window.Typo3MediaBrowserCallbacks.onLoad(event);
+						if (window.NeosMediaBrowserCallbacks && window.NeosMediaBrowserCallbacks.onLoad) {
+							window.NeosMediaBrowserCallbacks.onLoad(event);
 						}
 					});
 				}
@@ -141,7 +150,9 @@ function(Ember, $, FileUpload, template, SecondaryInspectorController, Utility, 
 
 			if (assetIdentifiers.length > 0) {
 				this.set('_showLoadingIndicator', true);
-				HttpClient.getResource(that.get('_assetMetadataEndpointUri') + '?' + $.param({assets: assetIdentifiers})).then(
+				// overriding the request method to POST, so too many assets do not cause "Request URI Too Large" errors.
+				// settings CSRF token manually, since getResource (naturally) does not add it.
+				HttpClient.getResource(that.get('_assetMetadataEndpointUri'), {type: 'POST', data: {__csrfToken: Configuration.get('CsrfToken'), assets: assetIdentifiers}}).then(
 					function(result) {
 						that.get('assets').addObjects(result);
 						that.set('_showLoadingIndicator', false);
@@ -157,7 +168,7 @@ function(Ember, $, FileUpload, template, SecondaryInspectorController, Utility, 
 
 		_beforeMediaBrowserIsShown: function() {
 			var that = this;
-			window.Typo3MediaBrowserCallbacks = {
+			window.NeosMediaBrowserCallbacks = {
 				assetChosen: function(assetIdentifier) {
 					// we hide the default upload preview image; as we only want the loading indicator to be visible
 					that.set('_loadPreviewImageHandler', HttpClient.getResource(
@@ -171,6 +182,13 @@ function(Ember, $, FileUpload, template, SecondaryInspectorController, Utility, 
 				}
 			};
 		},
+
+		/**
+		 * Computed property to decide if the Media Browser button should be displayed in the editor
+		 */
+		shouldRenderMediaBrowser: function () {
+			return (this.get('features.mediaBrowser'));
+		}.property('features.mediaBrowser'),
 
 		/****************************************
 		 * FILE REMOVE
@@ -226,6 +244,13 @@ function(Ember, $, FileUpload, template, SecondaryInspectorController, Utility, 
 			this._uploader.bind('BeforeUpload', function(uploader, file) {
 				uploader.settings.multipart_params['metadata'] = 'Asset';
 			});
-		}
+		},
+
+		/**
+		 * Computed property to decide if the Upload button should be displayed in the editor
+		 */
+		shouldRenderUpload: function () {
+			return (this.get('features.upload'));
+		}.property('features.upload')
 	});
 });

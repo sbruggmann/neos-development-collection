@@ -15,7 +15,7 @@ use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cache\CacheManager;
 
 /**
- * Listener to clear TypoScript caches if important files have changed
+ * Listener to clear Fusion caches if important files have changed
  *
  * It's used in the Package bootstrap as an early instance, so no full dependency injection is available.
  *
@@ -44,8 +44,8 @@ class FileMonitorListener
     public function flushContentCacheOnFileChanges($fileMonitorIdentifier, array $changedFiles)
     {
         $fileMonitorsThatTriggerContentCacheFlush = array(
-            'TYPO3CR_NodeTypesConfiguration',
-            'TypoScript_Files',
+            'ContentRepository_NodeTypesConfiguration',
+            'Fusion_Files',
             'Fluid_TemplateFiles',
             'Flow_ClassFiles',
             'Flow_ConfigurationFiles',
@@ -53,7 +53,7 @@ class FileMonitorListener
         );
 
         if (in_array($fileMonitorIdentifier, $fileMonitorsThatTriggerContentCacheFlush)) {
-            $this->flowCacheManager->getCache('TYPO3_TypoScript_Content')->flush();
+            $this->flowCacheManager->getCache('Neos_Fusion_Content')->flush();
         }
     }
 }

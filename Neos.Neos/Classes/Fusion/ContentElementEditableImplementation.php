@@ -16,12 +16,12 @@ use Neos\Flow\Security\Authorization\PrivilegeManagerInterface;
 use Neos\Neos\Domain\Service\ContentContext;
 use Neos\Neos\Service\ContentElementEditableService;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\Fusion\TypoScriptObjects\AbstractTypoScriptObject;
+use Neos\Fusion\FusionObjects\AbstractFusionObject;
 
 /**
  * Adds meta data attributes to the processed Property to enable in place editing
  */
-class ContentElementEditableImplementation extends AbstractTypoScriptObject
+class ContentElementEditableImplementation extends AbstractFusionObject
 {
     /**
      * @Flow\Inject
@@ -42,11 +42,11 @@ class ContentElementEditableImplementation extends AbstractTypoScriptObject
      */
     public function getValue()
     {
-        return $this->tsValue('value');
+        return $this->fusionValue('value');
     }
 
     /**
-     * Evaluate this TypoScript object and return the result
+     * Evaluate this Fusion object and return the result
      *
      * @return mixed
      */
@@ -55,13 +55,13 @@ class ContentElementEditableImplementation extends AbstractTypoScriptObject
         $content = $this->getValue();
 
         /** @var $node NodeInterface */
-        $node = $this->tsValue('node');
+        $node = $this->fusionValue('node');
         if (!$node instanceof NodeInterface) {
             return $content;
         }
 
         /** @var $property string */
-        $property = $this->tsValue('property');
+        $property = $this->fusionValue('property');
 
         /** @var $contentContext ContentContext */
         $contentContext = $node->getContext();

@@ -87,7 +87,7 @@ class NodeType
     protected $nodeTypeManager;
 
     /**
-     * @var NodeDataLabelGeneratorInterface|NodeLabelGeneratorInterface
+     * @var NodeLabelGeneratorInterface
      */
     protected $nodeLabelGenerator;
 
@@ -208,8 +208,7 @@ class NodeType
             $superTypes[$inheritedSuperTypeName] = $inheritedSuperType;
         }
 
-        // the method getSuperTypes() is a magic getter
-        $superTypesInSuperType = $superType->getSuperTypes() ?: [];
+        $superTypesInSuperType = $superType->getConfiguration('superTypes') ?: [];
         foreach ($superTypesInSuperType as $inheritedSuperTypeName => $inheritedSuperType) {
             if (!$inheritedSuperType) {
                 unset($superTypes[$inheritedSuperTypeName]);
@@ -415,17 +414,10 @@ class NodeType
             if ($this->hasConfiguration('label.generatorClass')) {
                 $nodeLabelGenerator = $this->objectManager->get($this->getConfiguration('label.generatorClass'));
             } elseif ($this->hasConfiguration('label') && is_string($this->getConfiguration('label'))) {
-                $nodeLabelGenerator = $this->objectManager->get(\Neos\ContentRepository\Domain\Model\ExpressionBasedNodeLabelGenerator::class);
+                $nodeLabelGenerator = $this->objectManager->get(ExpressionBasedNodeLabelGenerator::class);
                 $nodeLabelGenerator->setExpression($this->getConfiguration('label'));
             } else {
-                $nodeLabelGenerator = $this->objectManager->get(\Neos\ContentRepository\Domain\Model\NodeLabelGeneratorInterface::class);
-            }
-
-            // TODO: Remove after deprecation phase of NodeDataLabelGeneratorInterface
-            if ($nodeLabelGenerator instanceof NodeDataLabelGeneratorInterface) {
-                $adaptor = new NodeDataLabelGeneratorAdaptor();
-                $adaptor->setNodeDataLabelGenerator($nodeLabelGenerator);
-                $nodeLabelGenerator = $adaptor;
+                $nodeLabelGenerator = $this->objectManager->get(NodeLabelGeneratorInterface::class);
             }
 
             $this->nodeLabelGenerator = $nodeLabelGenerator;
@@ -698,26 +690,5 @@ class NodeType
     public function __toString()
     {
         return $this->getName();
-    }
-
-    /**
-     * Magic get* and has* method for all properties inside $configuration.
-     *
-     * @param string $methodName
-     * @param array $arguments
-     * @return mixed
-     * @deprecated Use hasConfiguration() or getConfiguration() instead
-     */
-    public function __call($methodName, array $arguments)
-    {
-        if (substr($methodName, 0, 3) === 'get') {
-            $configurationKey = lcfirst(substr($methodName, 3));
-            return $this->getConfiguration($configurationKey);
-        } elseif (substr($methodName, 0, 3) === 'has') {
-            $configurationKey = lcfirst(substr($methodName, 3));
-            return $this->hasConfiguration($configurationKey);
-        }
-
-        trigger_error('Call to undefined method ' . get_class($this) . '::' . $methodName, E_USER_ERROR);
     }
 }

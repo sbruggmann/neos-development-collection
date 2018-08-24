@@ -17,15 +17,16 @@ use Behat\Mink\Element\ElementInterface;
 use Behat\Mink\Exception\ElementNotFoundException;
 use Behat\MinkExtension\Context\MinkContext;
 use Neos\Behat\Tests\Behat\FlowContext;
+use Neos\ContentRepository\Domain\Repository\NodeDataRepository;
+use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
+use Neos\ContentRepository\Service\AuthorizationService;
+use Neos\ContentRepository\Tests\Behavior\Features\Bootstrap\NodeAuthorizationTrait;
+use Neos\ContentRepository\Tests\Behavior\Features\Bootstrap\NodeOperationsTrait;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
-use Neos\Utility\ObjectAccess;
 use Neos\Flow\Security\AccountRepository;
 use Neos\Flow\Tests\Behavior\Features\Bootstrap\IsolatedBehatStepsTrait;
 use Neos\Flow\Tests\Behavior\Features\Bootstrap\SecurityOperationsTrait;
-use Neos\Utility\Arrays;
-use PHPUnit_Framework_Assert as Assert;
 use Neos\Flow\Utility\Environment;
-use Neos\Utility\Files;
 use Neos\Neos\Domain\Model\Site;
 use Neos\Neos\Domain\Repository\SiteRepository;
 use Neos\Neos\Domain\Service\SiteExportService;
@@ -33,13 +34,12 @@ use Neos\Neos\Domain\Service\SiteImportService;
 use Neos\Neos\Domain\Service\SiteService;
 use Neos\Neos\Domain\Service\UserService;
 use Neos\Neos\Service\PublishingService;
-use Neos\Party\Domain\Repository\PartyRepository;
-use Neos\ContentRepository\Domain\Repository\NodeDataRepository;
-use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
-use Neos\ContentRepository\Service\AuthorizationService;
-use Neos\ContentRepository\Tests\Behavior\Features\Bootstrap\NodeAuthorizationTrait;
-use Neos\ContentRepository\Tests\Behavior\Features\Bootstrap\NodeOperationsTrait;
 use Neos\Neos\Tests\Functional\Command\BehatTestHelper;
+use Neos\Party\Domain\Repository\PartyRepository;
+use Neos\Utility\Arrays;
+use Neos\Utility\Files;
+use Neos\Utility\ObjectAccess;
+use PHPUnit\Framework\Assert as Assert;
 
 require_once(__DIR__ . '/../../../../../../Application/Neos.Behat/Tests/Behat/FlowContext.php');
 require_once(__DIR__ . '/../../../../../../Framework/Neos.Flow/Tests/Behavior/Features/Bootstrap/IsolatedBehatStepsTrait.php');
@@ -291,8 +291,8 @@ class FeatureContext extends MinkContext
     public function clearContentCache()
     {
         $directories = array_merge(
-            glob(FLOW_PATH_DATA . 'Temporary/*/Cache/Data/TYPO3_TypoScript_Content'),
-            glob(FLOW_PATH_DATA . 'Temporary/*/*/Cache/Data/TYPO3_TypoScript_Content')
+            glob(FLOW_PATH_DATA . 'Temporary/*/Cache/Data/Neos_Fusion_Content'),
+            glob(FLOW_PATH_DATA . 'Temporary/*/*/Cache/Data/Neos_Fusion_Content')
         );
         if (is_array($directories)) {
             foreach ($directories as $directory) {
@@ -387,7 +387,7 @@ class FeatureContext extends MinkContext
      */
     public function iSelectTheFirstHeadlineContentElement()
     {
-        $element = $this->assertSession()->elementExists('css', '.typo3-neos-nodetypes-headline');
+        $element = $this->assertSession()->elementExists('css', '.neos-nodetypes-headline');
         $element->click();
 
         $this->selectedContentElement = $element;

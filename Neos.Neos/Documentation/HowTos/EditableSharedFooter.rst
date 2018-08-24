@@ -17,7 +17,7 @@ the following configuration in NodeTypes.yaml::
 
 	'My.Package:HomePage':
 	  superTypes:
-	    'Neos.Neos.NodeTypes:Page': TRUE
+	    'Neos.NodeTypes:Page': TRUE
 	  ui:
 	    label: 'Homepage'
 	  childNodes:
@@ -30,9 +30,9 @@ the following configuration in NodeTypes.yaml::
 	(for example if you manually updated the node type in the database) you might
 	have to create the missing child nodes using::
 
-		./flow node:repair --node-type Neos.Neos.NodeTypes:Page
+		./flow node:repair --node-type Neos.NodeTypes:Page
 
-TypoScript code::
+Fusion code::
 
 	footer = Neos.Neos:ContentCollection {
 		nodePath = ${q(site).find('footer').property('_path')}

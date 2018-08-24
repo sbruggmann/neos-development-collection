@@ -18,12 +18,12 @@ use Neos\Flow\Http\Response;
 use Neos\Flow\Mvc\Dispatcher;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\Fusion\TypoScriptObjects\AbstractArrayTypoScriptObject;
+use Neos\Fusion\FusionObjects\AbstractArrayFusionObject;
 
 /**
- * A TypoScript Plugin object.
+ * A Fusion Plugin object.
  */
-class PluginImplementation extends AbstractArrayTypoScriptObject
+class PluginImplementation extends AbstractArrayFusionObject
 {
     /**
      * @Flow\Inject
@@ -58,7 +58,7 @@ class PluginImplementation extends AbstractArrayTypoScriptObject
      */
     public function getPackage()
     {
-        return $this->tsValue('package');
+        return $this->fusionValue('package');
     }
 
     /**
@@ -66,7 +66,7 @@ class PluginImplementation extends AbstractArrayTypoScriptObject
      */
     public function getSubpackage()
     {
-        return $this->tsValue('subpackage');
+        return $this->fusionValue('subpackage');
     }
 
     /**
@@ -74,7 +74,7 @@ class PluginImplementation extends AbstractArrayTypoScriptObject
      */
     public function getController()
     {
-        return $this->tsValue('controller');
+        return $this->fusionValue('controller');
     }
 
     /**
@@ -82,7 +82,7 @@ class PluginImplementation extends AbstractArrayTypoScriptObject
      */
     public function getAction()
     {
-        return $this->tsValue('action');
+        return $this->fusionValue('action');
     }
 
     /**
@@ -90,7 +90,7 @@ class PluginImplementation extends AbstractArrayTypoScriptObject
      */
     public function getArgumentNamespace()
     {
-        return $this->tsValue('argumentNamespace');
+        return $this->fusionValue('argumentNamespace');
     }
 
     /**
@@ -101,7 +101,7 @@ class PluginImplementation extends AbstractArrayTypoScriptObject
     protected function buildPluginRequest()
     {
         /** @var $parentRequest ActionRequest */
-        $parentRequest = $this->tsRuntime->getControllerContext()->getRequest();
+        $parentRequest = $this->runtime->getControllerContext()->getRequest();
         $pluginRequest = new ActionRequest($parentRequest);
         $pluginRequest->setArgumentNamespace('--' . $this->getPluginNamespace());
         $this->passArgumentsToPluginRequest($pluginRequest);
@@ -135,7 +135,7 @@ class PluginImplementation extends AbstractArrayTypoScriptObject
         }
 
         foreach ($this->properties as $key => $value) {
-            $pluginRequest->setArgument('__' . $key, $this->tsValue($key));
+            $pluginRequest->setArgument('__' . $key, $this->fusionValue($key));
         }
         return $pluginRequest;
     }
@@ -147,11 +147,11 @@ class PluginImplementation extends AbstractArrayTypoScriptObject
      */
     public function evaluate()
     {
-        $currentContext = $this->tsRuntime->getCurrentContext();
+        $currentContext = $this->runtime->getCurrentContext();
         $this->node = $currentContext['node'];
         $this->documentNode = $currentContext['documentNode'];
         /** @var $parentResponse Response */
-        $parentResponse = $this->tsRuntime->getControllerContext()->getResponse();
+        $parentResponse = $this->runtime->getControllerContext()->getResponse();
         $pluginResponse = new Response($parentResponse);
 
         $this->dispatcher->dispatch($this->buildPluginRequest(), $pluginResponse);

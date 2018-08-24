@@ -34,7 +34,7 @@ use Neos\ContentRepository\Domain\Utility\NodePaths;
  * A service for creating URIs pointing to nodes and assets.
  *
  * The target node can be provided as string or as a Node object; if not specified
- * at all, the generated URI will refer to the current document node inside the TypoScript context.
+ * at all, the generated URI will refer to the current document node inside the Fusion context.
  *
  * When specifying the ``node`` argument as string, the following conventions apply:
  *
@@ -64,7 +64,7 @@ class LinkingService
      *
      * @var string
      */
-    const PATTERN_SUPPORTED_URIS = '/(node|asset):\/\/(([a-f0-9]){8}-([a-f0-9]){4}-([a-f0-9]){4}-([a-f0-9]){4}-([a-f0-9]){12})/';
+    const PATTERN_SUPPORTED_URIS = '/(node|asset):\/\/([a-z0-9\-]+|([a-f0-9]){8}-([a-f0-9]){4}-([a-f0-9]){4}-([a-f0-9]){4}-([a-f0-9]){12})/';
 
     /**
      * @Flow\Inject
@@ -289,7 +289,7 @@ class LinkingService
             ->uriFor('show', array('node' => $resolvedNode), 'Frontend\Node', 'Neos.Neos');
 
         $siteNode = $resolvedNode->getContext()->getCurrentSiteNode();
-        if (NodePaths::isSubPathOf($siteNode->getPath(), $resolvedNode->getPath())) {
+        if ($siteNode instanceof NodeInterface && NodePaths::isSubPathOf($siteNode->getPath(), $resolvedNode->getPath())) {
             /** @var Site $site */
             $site = $resolvedNode->getContext()->getCurrentSite();
         } else {
@@ -301,7 +301,7 @@ class LinkingService
         if ($site->hasActiveDomains()) {
             $requestUriHost = $request->getHttpRequest()->getBaseUri()->getHost();
             $activeHostPatterns = $site->getActiveDomains()->map(function ($domain) {
-                return $domain->getHostPattern();
+                return $domain->getHostname();
             })->toArray();
             if (!in_array($requestUriHost, $activeHostPatterns, true)) {
                 $uri = $this->createSiteUri($controllerContext, $site) . '/' . ltrim($uri, '/');
@@ -333,7 +333,7 @@ class LinkingService
         return sprintf(
             '%s://%s%s%s',
             $primaryDomain->getScheme() ?: $requestUri->getScheme(),
-            $primaryDomain->getHostPattern(),
+            $primaryDomain->getHostname(),
             $port && !in_array($port, [80, 443], true) ? ':' . $port : '',
             rtrim($baseUri->getPath(), '/') // remove trailing slash, $uri has leading slash already
         );

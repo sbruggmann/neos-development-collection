@@ -30,7 +30,7 @@ Yaml (Sites/Vendor.Site/Configuration/NodeTypes.yaml)::
 
 Next you need to define the prototype for the slider in typoscript.
 
-TypoScript (Sites/Vendor.Site/Resources/Private/TypoScript/NodeTypes/Carousel.fusion)::
+Fusion (Sites/Vendor.Site/Resources/Private/Fusion/NodeTypes/Carousel.fusion)::
 
 	prototype(Vendor.Site:Carousel) {
 		carouselItems = Neos.Neos:ContentCollection {
@@ -40,12 +40,12 @@ TypoScript (Sites/Vendor.Site/Resources/Private/TypoScript/NodeTypes/Carousel.fu
 		}
 
 		// Collect the carousels children but only images
-		carouselItemArray = ${q(node).children('carouselItems').children('[instanceof Neos.Neos.NodeTypes:Image]')}
+		carouselItemArray = ${q(node).children('carouselItems').children('[instanceof Neos.NodeTypes:Image]')}
 
 		// Enhance image prototype when inside the carousel
-		prototype(Neos.Neos.NodeTypes:Image) {
+		prototype(Neos.NodeTypes:Image) {
 			// Render images in the carousel with a special template.
-			templatePath = 'resource://Vendor.Site/Private/Templates/TypoScriptObjects/CarouselItem.html'
+			templatePath = 'resource://Vendor.Site/Private/Templates/FusionObjects/CarouselItem.html'
 
 			// The first item should later be marked as active
 			attributes.class = ${'item' + (carouselItemsIteration.isFirst ? ' active' : '')}
@@ -55,7 +55,7 @@ TypoScript (Sites/Vendor.Site/Resources/Private/TypoScript/NodeTypes/Carousel.fu
 		}
 	}
 
-Now you need to include this at the top of your (Sites/Vendor.Site/Resources/Private/TypoScript/Root.fusion)::
+Now you need to include this at the top of your (Sites/Vendor.Site/Resources/Private/Fusion/Root.fusion)::
 
 	// Includes all additional ts2 files inside the NodeTypes folder
 	include: NodeTypes/*.fusion
@@ -65,7 +65,7 @@ For rendering you need the fluid templates for the slider.
 Html (Sites/Vendor.Site/Private/Templates/NodeTypes/Carousel.html) ::
 
 	{namespace neos=Neos\Neos\ViewHelpers}
-	{namespace ts=TYPO3\TypoScript\ViewHelpers}
+	{namespace fusion=Neos\Fusion\ViewHelpers}
 	<div{attributes -> f:format.raw()}>
 		<div class="carousel slide" id="{node.identifier}">
 			<!-- Indicators -->
@@ -90,10 +90,10 @@ Html (Sites/Vendor.Site/Private/Templates/NodeTypes/Carousel.html) ::
 
 And now the fluid template for the slider items.
 
-Html (Sites/Vendor.Site/Private/Templates/TypoScriptObjects/CarouselItem.html) ::
+Html (Sites/Vendor.Site/Private/Templates/FusionObjects/CarouselItem.html) ::
 
 	{namespace neos=Neos\Neos\ViewHelpers}
-	{namespace media=TYPO3\Media\ViewHelpers}
+	{namespace media=Neos\Media\ViewHelpers}
 	<div{attributes -> f:format.raw()}>
 		<f:if condition="{image}">
 			<f:then>
@@ -114,7 +114,7 @@ For styling you can simply include the styles provided in bootstrap into your pa
 
 Html ::
 
-	<link rel="stylesheet" href="{f:uri.resource(path: '3/css/bootstrap.min.css', package: 'TYPO3.Twitter.Bootstrap')}" media="all" />
+	<link rel="stylesheet" href="{f:uri.resource(path: '3/css/bootstrap.min.css', package: 'Neos.Twitter.Bootstrap')}" media="all" />
 
 If you want to hide specific parts of a plugin while in backend you can use the provided neos-backend class.
 
@@ -128,6 +128,6 @@ Don't forget to include the javascript for the plugin from the bootstrap package
 
 Html ::
 
-	<script src="{f:uri.resource(path: '3/js/bootstrap.min.js', package: 'TYPO3.Twitter.Bootstrap')}"></script>
+	<script src="{f:uri.resource(path: '3/js/bootstrap.min.js', package: 'Neos.Twitter.Bootstrap')}"></script>
 
 Now, you should be able to add the new 'Carousel' node type as content element.

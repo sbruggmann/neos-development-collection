@@ -25,7 +25,7 @@ If you do not have the Kickstart package installed, you must do this now:
 .. code-block:: bash
 
   cd /your/htdocs/Neos
-  php /path/to/composer.phar require typo3/kickstart \*
+  php /path/to/composer.phar require neos/kickstarter \*
 
 Now create a package with a model, so we have something to show in the plugin:
 
@@ -54,17 +54,17 @@ Configure Access Rights
 -----------------------
 
 To be able to call the actions of the controller you have to configure a matching set of rights.
-Add the following to *Configuration/Policy.yaml* of your package:
+Create a *Policy.yaml* file in *Packages/Application/Sarkosh.CdCollection/Configuration/Policy.yaml* containing:
 
 .. code-block:: yaml
 
   privilegeTargets:
-    TYPO3\Flow\Security\Authorization\Privilege\Method\MethodPrivilege:
+    Neos\Flow\Security\Authorization\Privilege\Method\MethodPrivilege:
       'Sarkosh.CdCollection:StandardControllerActions':
         matcher: 'method(Sarkosh\CdCollection\Controller\StandardController->(index)Action())'
 
   roles:
-    'TYPO3.Flow:Everybody':
+    'Neos.Flow:Everybody':
       privileges:
         -
           privilegeTarget: 'Sarkosh.CdCollection:StandardControllerActions'
@@ -89,7 +89,7 @@ into the *Configuration/Routes.yaml* of your whole setup (before the Neos routes
       '@format': 'html'
     subRoutes:
       FlowSubroutes:
-        package: TYPO3.Flow
+        package: Neos.Flow
 
 The frontend of your plugin can now be called via ``http://neos.demo/flow/sarkosh.cdcollection``.
 We specifically use the ``flow`` prefix here to ensure that the routes of Flow do not interfere with Neos.
@@ -122,6 +122,14 @@ to keep things organized. Technically it has no relevance.
   mkdir Packages/Plugins
   mv Packages/Application/Sarkosh.CdCollection Packages/Plugins/Sarkosh.CdCollection
 
+If you do this, it is important to rescan the available packages:
+
+.. code-block:: bash
+
+  ./flow flow:package:rescan
+
+After this, you can use the Plugin with the same url ``http://neos.demo/flow/sarkosh.cdcollection``
+
 Converting a Flow Package Into a Neos Plugin
 ============================================
 
@@ -148,13 +156,13 @@ Add the following to *Configuration/NodeTypes.yaml* of your package:
 This will add a new entry labeled "CD Collection" to the "Plugins" group in the content
 element selector (existing groups are *General*, *Structure* and *Plugins*).
 
-Configure TypoScript
---------------------
+Configure Fusion
+----------------
 
-Second, the rendering of the plugin needs to be specified using TypoScript, so the following
-TypoScript needs to be added to your package.
+Second, the rendering of the plugin needs to be specified using Fusion, so the following
+Fusion needs to be added to your package.
 
-*Resources/Private/TypoScript/Plugin.fusion*::
+*Resources/Private/Fusion/Plugin.fusion*::
 
   prototype(Sarkosh.CdCollection:Plugin) < prototype(Neos.Neos:Plugin)
   prototype(Sarkosh.CdCollection:Plugin) {
@@ -163,7 +171,7 @@ TypoScript needs to be added to your package.
   	action = 'index'
   }
 
-Finally tweak your site package's *Root.fusion* and include the newly created TypoScript file::
+Finally tweak your site package's *Root.fusion* and include the newly created Fusion file::
 
   include: Plugin.fusion
 
@@ -174,23 +182,23 @@ To automatically include the Root.fusion in Neos you have to add the following l
 
 .. code-block:: yaml
 
-  TYPO3:
+  Neos:
     Neos:
-      typoScript:
+      fusion:
         autoInclude:
           'Sarkosh.CdCollection': TRUE
 
-Use TypoScript to configure the Plugin
+Use Fusion to configure the Plugin
 --------------------------------------
 
-To hand over configuration to your plugin you can add arbitrary TypoScript values to *Resources/Private/TypoScript/Plugin.fusion*::
+To hand over configuration to your plugin you can add arbitrary Fusion values to *Resources/Private/Fusion/Plugin.fusion*::
 
   prototype(Sarkosh.CdCollection:Plugin) {
   	...
   	myNodeName = ${q(node).property('name')}
   }
 
-In the controller of your plugin you can access the value from TypoScript like this.
+In the controller of your plugin you can access the value from Fusion like this.
 
 .. code-block:: php
 
@@ -206,7 +214,7 @@ Inside of your Plugin you can use the usual ``f:link.action`` and ``f:uri.action
 
 If you want to create links to your plugin from outside the plugin context you have to use one of the following methods.
 
-To create a link to a ControllerAction of your Plugin in TypoScript you can use the following code::
+To create a link to a ControllerAction of your Plugin in Fusion you can use the following code::
 
   link = Neos.Neos:NodeUri {
   	# you have to identify the document that contains your plugin somehow

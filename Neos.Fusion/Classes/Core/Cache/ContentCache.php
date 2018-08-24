@@ -16,13 +16,14 @@ use Neos\Cache\CacheAwareInterface;
 use Neos\Cache\Frontend\StringFrontend;
 use Neos\Flow\Property\PropertyMapper;
 use Neos\Flow\Security\Context;
+use Neos\Flow\Utility\Algorithms;
 use Neos\Fusion\Exception;
 use Doctrine\ORM\Proxy\Proxy;
 use Neos\Fusion\Exception\CacheException;
 
 /**
- * A wrapper around a TYPO3 Flow cache which provides additional functionality for caching partial content (segments)
- * rendered by the TypoScript Runtime.
+ * A wrapper around a Neos Flow cache which provides additional functionality for caching partial content (segments)
+ * rendered by the Fusion Runtime.
  *
  * The cache build process generally follows these steps:
  *
@@ -65,12 +66,6 @@ class ContentCache
     const SEGMENT_TYPE_DYNAMICCACHED = 'dynamiccached';
 
     /**
-     * @Flow\Inject
-     * @var CacheSegmentParser
-     */
-    protected $parser;
-
-    /**
      * @var StringFrontend
      * @Flow\Inject
      */
@@ -98,31 +93,31 @@ class ContentCache
      */
     public function __construct()
     {
-        $this->randomCacheMarker = uniqid();
+        $this->randomCacheMarker = Algorithms::generateRandomString(13);
     }
 
     /**
      * Takes the given content and adds markers for later use as a cached content segment.
      *
      * This function will add a start and an end token to the beginning and end of the content and generate a cache
-     * identifier based on the current TypoScript path and additional values which were defined in the TypoScript
+     * identifier based on the current Fusion path and additional values which were defined in the Fusion
      * configuration by the site integrator.
      *
      * The whole cache segment (START TOKEN + IDENTIFIER + SEPARATOR TOKEN + original content + END TOKEN) is returned
      * as a string.
      *
-     * This method is called by the TypoScript Runtime while rendering a TypoScript object.
+     * This method is called by the Fusion Runtime while rendering a Fusion object.
      *
      * @param string $content The (partial) content which should potentially be cached later on
-     * @param string $typoScriptPath The TypoScript path that rendered the content, for example "page<Neos.NodeTypes:Page>/body<Acme.Demo:DefaultPageTemplate>/parts/breadcrumbMenu"
+     * @param string $fusionPath The Fusion path that rendered the content, for example "page<Neos.NodeTypes:Page>/body<Acme.Demo:DefaultPageTemplate>/parts/breadcrumbMenu"
      * @param array $cacheIdentifierValues The values (simple type or implementing CacheAwareInterface) that should be used to create a cache identifier, will be sorted by keys for consistent ordering
      * @param array $tags Tags to add to the cache entry
      * @param integer $lifetime Lifetime of the cache segment in seconds. NULL for the default lifetime and 0 for unlimited lifetime.
      * @return string The original content, but with additional markers and a cache identifier added
      */
-    public function createCacheSegment($content, $typoScriptPath, array $cacheIdentifierValues, array $tags = [], $lifetime = null)
+    public function createCacheSegment($content, $fusionPath, array $cacheIdentifierValues, array $tags = [], $lifetime = null)
     {
-        $cacheIdentifier = $this->renderContentCacheEntryIdentifier($typoScriptPath, $cacheIdentifierValues);
+        $cacheIdentifier = $this->renderContentCacheEntryIdentifier($fusionPath, $cacheIdentifierValues);
         $metadata = implode(',', $tags);
         if ($lifetime !== null) {
             $metadata .= ';' . $lifetime;
@@ -134,44 +129,44 @@ class ContentCache
      * Similar to createCacheSegment() creates a content segment with markers added, but in contrast to that function
      * this method is used for rendering a segment which is not supposed to be cached.
      *
-     * This method is called by the TypoScript Runtime while rendering a TypoScript object.
+     * This method is called by the Fusion Runtime while rendering a Fusion object.
      *
-     * @param string $content The content rendered by the TypoScript Runtime
-     * @param string $typoScriptPath The TypoScript path that rendered the content, for example "page<Neos.NodeTypes:Page>/body<Acme.Demo:DefaultPageTemplate>/parts/breadcrumbMenu"
-     * @param array $contextVariables TypoScript context variables which are needed to correctly render the specified TypoScript object
+     * @param string $content The content rendered by the Fusion Runtime
+     * @param string $fusionPath The Fusion path that rendered the content, for example "page<Neos.NodeTypes:Page>/body<Acme.Demo:DefaultPageTemplate>/parts/breadcrumbMenu"
+     * @param array $contextVariables Fusion context variables which are needed to correctly render the specified Fusion object
      * @return string The original content, but with additional markers added
      */
-    public function createUncachedSegment($content, $typoScriptPath, array $contextVariables)
+    public function createUncachedSegment($content, $fusionPath, array $contextVariables)
     {
         $serializedContext = $this->serializeContext($contextVariables);
-        return self::CACHE_SEGMENT_START_TOKEN . $this->randomCacheMarker . 'eval=' . $typoScriptPath . self::CACHE_SEGMENT_SEPARATOR_TOKEN . $this->randomCacheMarker . json_encode(['context' => $serializedContext]) . self::CACHE_SEGMENT_SEPARATOR_TOKEN . $this->randomCacheMarker . $content . self::CACHE_SEGMENT_END_TOKEN . $this->randomCacheMarker;
+        return self::CACHE_SEGMENT_START_TOKEN . $this->randomCacheMarker . 'eval=' . $fusionPath . self::CACHE_SEGMENT_SEPARATOR_TOKEN . $this->randomCacheMarker . json_encode(['context' => $serializedContext]) . self::CACHE_SEGMENT_SEPARATOR_TOKEN . $this->randomCacheMarker . $content . self::CACHE_SEGMENT_END_TOKEN . $this->randomCacheMarker;
     }
 
     /**
      * Similar to createUncachedSegment() creates a content segment with markers added, but in contrast to that function
      * this method is used for rendering a segment which will be evaluated at runtime but can still be cached.
      *
-     * This method is called by the TypoScript Runtime while rendering a TypoScript object.
+     * This method is called by the Fusion Runtime while rendering a Fusion object.
      *
-     * @param string $content The content rendered by the TypoScript Runtime
-     * @param string $typoScriptPath The TypoScript path that rendered the content, for example "page<Neos.NodeTypes:Page>/body<Acme.Demo:DefaultPageTemplate>/parts/breadcrumbMenu"
-     * @param array $contextVariables TypoScript context variables which are needed to correctly render the specified TypoScript object
+     * @param string $content The content rendered by the Fusion Runtime
+     * @param string $fusionPath The Fusion path that rendered the content, for example "page<Neos.NodeTypes:Page>/body<Acme.Demo:DefaultPageTemplate>/parts/breadcrumbMenu"
+     * @param array $contextVariables Fusion context variables which are needed to correctly render the specified Fusion object
      * @param array $cacheIdentifierValues
      * @param array $tags Tags to add to the cache entry
      * @param integer $lifetime Lifetime of the cache segment in seconds. NULL for the default lifetime and 0 for unlimited lifetime.
      * @param string $cacheDiscriminator The evaluated cache discriminator value
      * @return string The original content, but with additional markers added
      */
-    public function createDynamicCachedSegment($content, $typoScriptPath, array $contextVariables, array $cacheIdentifierValues, array $tags = [], $lifetime = null, $cacheDiscriminator)
+    public function createDynamicCachedSegment($content, $fusionPath, array $contextVariables, array $cacheIdentifierValues, array $tags = [], $lifetime = null, $cacheDiscriminator)
     {
         $metadata = implode(',', $tags);
         if ($lifetime !== null) {
             $metadata .= ';' . $lifetime;
         }
         $cacheDiscriminator = md5($cacheDiscriminator);
-        $identifier = $this->renderContentCacheEntryIdentifier($typoScriptPath, $cacheIdentifierValues) . '_' . $cacheDiscriminator;
+        $identifier = $this->renderContentCacheEntryIdentifier($fusionPath, $cacheIdentifierValues) . '_' . $cacheDiscriminator;
         $segmentData = [
-            'path' => $typoScriptPath,
+            'path' => $fusionPath,
             'metadata' => $metadata,
             'context' => $this->serializeContext($contextVariables),
         ];
@@ -182,12 +177,12 @@ class ContentCache
     /**
      * Renders an identifier for a content cache entry
      *
-     * @param string $typoScriptPath
+     * @param string $fusionPath
      * @param array $cacheIdentifierValues
-     * @return string An MD5 hash built from the typoScriptPath and certain elements of the given identifier values
+     * @return string An MD5 hash built from the fusionPath and certain elements of the given identifier values
      * @throws CacheException If an invalid entry identifier value is given
      */
-    protected function renderContentCacheEntryIdentifier($typoScriptPath, array $cacheIdentifierValues)
+    protected function renderContentCacheEntryIdentifier($fusionPath, array $cacheIdentifierValues)
     {
         ksort($cacheIdentifierValues);
 
@@ -198,19 +193,19 @@ class ContentCache
             } elseif (is_string($value) || is_bool($value) || is_integer($value)) {
                 $identifierSource .= $key . '=' . $value . '&';
             } elseif ($value !== null) {
-                throw new CacheException(sprintf('Invalid cache entry identifier @cache.entryIdentifier.%s for path "%s". A entry identifier value must be a string or implement CacheAwareInterface.', $key, $typoScriptPath), 1395846615);
+                throw new CacheException(sprintf('Invalid cache entry identifier @cache.entryIdentifier.%s for path "%s". A entry identifier value must be a string or implement CacheAwareInterface.', $key, $fusionPath), 1395846615);
             }
         }
         $identifierSource .= 'securityContextHash=' . $this->securityContext->getContextHash();
 
-        return md5($typoScriptPath . '@' . $identifierSource);
+        return md5($fusionPath . '@' . $identifierSource);
     }
 
     /**
      * Takes a string of content which includes cache segment markers, extracts the marked segments, writes those
      * segments which can be cached to the actual cache and returns the cleaned up original content without markers.
      *
-     * This method is called by the TypoScript Runtime while rendering a TypoScript object.
+     * This method is called by the Fusion Runtime while rendering a Fusion object.
      *
      * @param string $content The content with an outer cache segment
      * @param boolean $storeCacheEntries Whether to store extracted cache segments in the cache
@@ -218,15 +213,15 @@ class ContentCache
      */
     public function processCacheSegments($content, $storeCacheEntries = true)
     {
-        $this->parser->extractRenderedSegments($content, $this->randomCacheMarker);
+        $parser = new CacheSegmentParser($content, $this->randomCacheMarker);
 
         if ($storeCacheEntries) {
-            $segments = $this->parser->getCacheSegments();
+            $segments = $parser->getCacheSegments();
 
             foreach ($segments as $segment) {
                 $metadata = explode(';', $segment['metadata']);
                 $tagsValue = $metadata[0] === '' ? [] : ($metadata[0] === '*' ? false : explode(',', $metadata[0]));
-                    // FALSE means we do not need to store the cache entry again (because it was previously fetched)
+                // FALSE means we do not need to store the cache entry again (because it was previously fetched)
                 if ($tagsValue !== false) {
                     $lifetime = isset($metadata[1]) ? (integer)$metadata[1] : null;
                     $this->cache->set($segment['identifier'], $segment['content'], $this->sanitizeTags($tagsValue), $lifetime);
@@ -234,7 +229,7 @@ class ContentCache
             }
         }
 
-        return $this->parser->getOutput();
+        return $parser->getOutput();
     }
 
     /**
@@ -242,15 +237,23 @@ class ContentCache
      * as well and segments which were not cacheable are rendered.
      *
      * @param \Closure $uncachedCommandCallback A callback to process commands in uncached segments
-     * @param string $typoScriptPath TypoScript path identifying the TypoScript object to retrieve from the content cache
+     * @param string $fusionPath Fusion path identifying the Fusion object to retrieve from the content cache
      * @param array $cacheIdentifierValues Further values which play into the cache identifier hash, must be the same as the ones specified while the cache entry was written
      * @param boolean $addCacheSegmentMarkersToPlaceholders If cache segment markers should be added – this makes sense if the cached segment is about to be included in a not-yet-cached segment
+     * @param string|bool $cacheDiscriminator The evaluated cache discriminator value, if any and FALSE if the cache discriminator is disabled for the current context
      * @return string|boolean The segment with replaced cache placeholders, or FALSE if a segment was missing in the cache
      * @throws Exception
      */
-    public function getCachedSegment($uncachedCommandCallback, $typoScriptPath, $cacheIdentifierValues, $addCacheSegmentMarkersToPlaceholders = false)
+    public function getCachedSegment($uncachedCommandCallback, $fusionPath, $cacheIdentifierValues, $addCacheSegmentMarkersToPlaceholders = false, $cacheDiscriminator = null)
     {
-        $cacheIdentifier = $this->renderContentCacheEntryIdentifier($typoScriptPath, $cacheIdentifierValues);
+        // If $addCacheSegmentMarkersToPlaceholders was set, the outer segment was a cache miss and we need to re-evaluate dynamic cached segments.
+        if ($cacheDiscriminator === false || ($addCacheSegmentMarkersToPlaceholders && $cacheDiscriminator !== null)) {
+            return false;
+        }
+        $cacheIdentifier = $this->renderContentCacheEntryIdentifier($fusionPath, $cacheIdentifierValues);
+        if ($cacheDiscriminator !== null) {
+            $cacheIdentifier .= '_' . md5($cacheDiscriminator);
+        }
         $content = $this->cache->get($cacheIdentifier);
 
         if ($content === false) {
@@ -263,13 +266,12 @@ class ContentCache
             if ($replaced === false) {
                 return false;
             }
+            $replaced += $this->replaceUncachedPlaceholders($uncachedCommandCallback, $content);
             if ($i > self::MAXIMUM_NESTING_LEVEL) {
                 throw new Exception('Maximum cache segment level reached', 1391873620);
             }
             $i++;
         } while ($replaced > 0);
-
-        $this->replaceUncachedPlaceholders($uncachedCommandCallback, $content);
 
         if ($addCacheSegmentMarkersToPlaceholders) {
             return self::CACHE_SEGMENT_START_TOKEN . $this->randomCacheMarker . $cacheIdentifier . self::CACHE_SEGMENT_SEPARATOR_TOKEN . $this->randomCacheMarker . '*' . self::CACHE_SEGMENT_SEPARATOR_TOKEN . $this->randomCacheMarker . $content . self::CACHE_SEGMENT_END_TOKEN . $this->randomCacheMarker;
@@ -310,11 +312,11 @@ class ContentCache
     }
 
     /**
-     * Replace segments which are marked as not-cacheable by their actual content by invoking the TypoScript Runtime.
+     * Replace segments which are marked as not-cacheable by their actual content by invoking the Fusion Runtime.
      *
      * @param \Closure $uncachedCommandCallback
      * @param string $content The content potentially containing not cacheable segments marked by the respective tokens
-     * @return string The original content, but with uncached segments replaced by the actual content
+     * @return integer Number of replaced placeholders
      */
     protected function replaceUncachedPlaceholders(\Closure $uncachedCommandCallback, &$content)
     {
@@ -324,7 +326,8 @@ class ContentCache
             $additionalData = json_decode($match['data'], true);
 
             return $uncachedCommandCallback($command, $additionalData, $cache);
-        }, $content);
+        }, $content, -1, $count);
+        return $count;
     }
 
     /**
@@ -371,7 +374,7 @@ class ContentCache
     /**
      * Flush content cache entries by tag
      *
-     * @param string $tag A tag value that was assigned to a cache entry in TypoScript, for example "Everything", "Node_[…]", "NodeType_[…]", "DescendantOf_[…]" whereas "…" is the node identifier or node type respectively
+     * @param string $tag A tag value that was assigned to a cache entry in Fusion, for example "Everything", "Node_[…]", "NodeType_[…]", "DescendantOf_[…]" whereas "…" is the node identifier or node type respectively
      * @return integer The number of cache entries which actually have been flushed
      */
     public function flushByTag($tag)
@@ -393,7 +396,7 @@ class ContentCache
      * Sanitizes the given tag for use with the cache framework
      *
      * @param string $tag A tag which possibly contains non-allowed characters, for example "NodeType_Neos.NodeTypes:Page"
-     * @return string A cleaned up tag, for example "NodeType_TYPO3_Neos-Page"
+     * @return string A cleaned up tag, for example "NodeType_Neos_Neos-Page"
      */
     protected function sanitizeTag($tag)
     {

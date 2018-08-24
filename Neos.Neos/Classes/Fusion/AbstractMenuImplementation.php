@@ -11,10 +11,9 @@ namespace Neos\Neos\Fusion;
  * source code.
  */
 
-use Neos\Flow\Annotations as Flow;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\Fusion\Exception as TypoScriptException;
-use Neos\Fusion\TypoScriptObjects\TemplateImplementation;
+use Neos\Fusion\Exception as FusionException;
+use Neos\Fusion\FusionObjects\TemplateImplementation;
 
 /**
  * Base class for Menu and DimensionsMenu
@@ -70,7 +69,7 @@ abstract class AbstractMenuImplementation extends TemplateImplementation
     public function getRenderHiddenInIndex()
     {
         if ($this->renderHiddenInIndex === null) {
-            $this->renderHiddenInIndex = (boolean)$this->tsValue('renderHiddenInIndex');
+            $this->renderHiddenInIndex = (boolean)$this->fusionValue('renderHiddenInIndex');
         }
 
         return $this->renderHiddenInIndex;
@@ -84,8 +83,8 @@ abstract class AbstractMenuImplementation extends TemplateImplementation
     public function getItems()
     {
         if ($this->items === null) {
-            $typoScriptContext = $this->tsRuntime->getCurrentContext();
-            $this->currentNode = isset($typoScriptContext['activeNode']) ? $typoScriptContext['activeNode'] : $typoScriptContext['documentNode'];
+            $fusionContext = $this->runtime->getCurrentContext();
+            $this->currentNode = isset($fusionContext['activeNode']) ? $fusionContext['activeNode'] : $fusionContext['documentNode'];
             $this->currentLevel = 1;
             $this->items = $this->buildItems();
         }
@@ -99,7 +98,7 @@ abstract class AbstractMenuImplementation extends TemplateImplementation
      *
      * Must be overridden in subclasses.
      *
-     * @throws TypoScriptException
+     * @throws FusionException
      * @return array An array of menu items and further information
      */
     abstract protected function buildItems();
@@ -131,7 +130,7 @@ abstract class AbstractMenuImplementation extends TemplateImplementation
 
     /**
      * Return TRUE/FALSE if the node is currently hidden or not in the menu; taking the "renderHiddenInIndex" configuration
-     * of the Menu TypoScript object into account.
+     * of the Menu Fusion object into account.
      *
      * This method needs to be called inside buildItems() in the subclasses.
      *

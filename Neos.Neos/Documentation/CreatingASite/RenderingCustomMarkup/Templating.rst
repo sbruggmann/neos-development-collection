@@ -7,7 +7,7 @@
 Templating
 ==========
 
-.. sectionauthor:: Sebastian Kurfürst <sebastian@typo3.org>
+.. sectionauthor:: Sebastian Kurfürst <sebastian@neos.io>
 
 .. in this template, the default highlighter is XML:
 
@@ -95,7 +95,7 @@ Namespaces can be defined in a template in two ways:
 {namespace f=Neos\FluidAdaptor\ViewHelpers}
   This is a non-standard way only understood by Fluid. It links the ``f``
   prefix to the PHP namespace ``\Neos\FluidAdaptor\ViewHelpers``.
-<html xmlns:foo=”http://some/unique/namespace”>
+<html xmlns:foo="http://some/unique/namespace">
   The standard for declaring a namespace in XML. This will link the ``foo``
   prefix to the URI ``http://some/unique/namespace`` and Fluid can look up
   the corresponding PHP namespace in your settings (so this is a two-piece
@@ -112,7 +112,7 @@ URI to PHP namespace mapping. The YAML syntax for that is:
 
 .. code-block:: yaml
 
-	TYPO3:
+	Neos:
 	  Fluid:
 	    namespaces:
 	      'http://some/unique/namespace': 'My\Php\Namespace'
@@ -466,8 +466,8 @@ Rendering the View Helper
 
 We refresh what we have learned so far: When a user writes something like
 ``<blog:displayNews />`` inside a template (and has imported the ``blog`` namespace
-to ``TYPO3\Blog\ViewHelpers``), Fluid will automatically instantiate the class
-``TYPO3\Blog\ViewHelpers\DisplayNewsViewHelper``, and invoke the render() method on it.
+to ``Neos\Blog\ViewHelpers``), Fluid will automatically instantiate the class
+``Neos\Blog\ViewHelpers\DisplayNewsViewHelper``, and invoke the render() method on it.
 
 This ``render()`` method should return the rendered content as string.
 
@@ -611,7 +611,7 @@ With the above methods, the ``Link\ActionViewHelper`` from above can be condense
 
 .. code-block:: php
 
-	class ActionViewHelper extends \TYPO3\\F3\Fluid\Core\AbstractViewHelper {
+	class ActionViewHelper extends \Neos\FluidAdaptor\Core\ViewHelper\AbstractViewHelper {
 
 		public function initializeArguments() {
 			$this->registerUniversalTagAttributes();
@@ -669,7 +669,7 @@ is not part of HTML, you could do that as follows:
 
 .. code-block:: xml
 
-	<f:link.action ... additionalAttributes="{fadeDuration : 800}">
+	<f:link.action action="..." additionalAttributes="{fadeDuration : 800}">
 		Link with fadeDuration set
 	</f:link.action>
 
@@ -840,11 +840,11 @@ the render ViewHelper in order to only render the content of the partial.
 
 Partial::
 
-	<html xmlns:x=”http://typo3.org/ns/Your/Package/ViewHelpers”>
-	<f:section name=”content”>
+	<html xmlns:x="http://typo3.org/ns/Your/Package/ViewHelpers">
+	<f:section name="content">
 		<x:yourViewHelper />
 	</f:section>
 
 Template::
 
-	<f:render partial=”PartialName” section=”content” />
+	<f:render partial="PartialName" section="content" />

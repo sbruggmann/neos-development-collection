@@ -20,7 +20,7 @@ use Neos\Flow\Mvc\Controller\ControllerContext;
 use Neos\Flow\Mvc\Routing\UriBuilder;
 
 /**
- * This runtime factory takes care of instantiating a TypoScript runtime.
+ * This runtime factory takes care of instantiating a Fusion runtime.
  *
  * @Flow\Scope("singleton")
  * @api
@@ -28,17 +28,17 @@ use Neos\Flow\Mvc\Routing\UriBuilder;
 class RuntimeFactory
 {
     /**
-     * @param array $typoScriptConfiguration
+     * @param array $fusionConfiguration
      * @param ControllerContext $controllerContext
      * @return Runtime
      */
-    public function create($typoScriptConfiguration, ControllerContext $controllerContext = null)
+    public function create($fusionConfiguration, ControllerContext $controllerContext = null)
     {
         if ($controllerContext === null) {
             $controllerContext = $this->createControllerContextFromEnvironment();
         }
 
-        return new Runtime($typoScriptConfiguration, $controllerContext);
+        return new Runtime($fusionConfiguration, $controllerContext);
     }
 
     /**
@@ -49,7 +49,7 @@ class RuntimeFactory
         $httpRequest = Request::createFromEnvironment();
 
         /** @var ActionRequest $request */
-        $request = $httpRequest->createActionRequest();
+        $request = new ActionRequest($httpRequest);
 
         $uriBuilder = new UriBuilder();
         $uriBuilder->setRequest($request);

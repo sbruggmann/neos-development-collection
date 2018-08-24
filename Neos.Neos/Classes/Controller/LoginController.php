@@ -97,8 +97,8 @@ class LoginController extends AbstractAuthenticationController
     {
         if (is_array($this->request->getInternalArgument('__authentication'))) {
             $authentication = $this->request->getInternalArgument('__authentication');
-            if (isset($authentication['TYPO3']['Flow']['Security']['Authentication']['Token']['UsernamePassword']['username'])) {
-                $this->request->setArgument('username', $authentication['TYPO3']['Flow']['Security']['Authentication']['Token']['UsernamePassword']['username']);
+            if (isset($authentication['Neos']['Flow']['Security']['Authentication']['Token']['UsernamePassword']['username'])) {
+                $this->request->setArgument('username', $authentication['Neos']['Flow']['Security']['Authentication']['Token']['UsernamePassword']['username']);
             }
         }
     }
@@ -201,6 +201,8 @@ class LoginController extends AbstractAuthenticationController
      * Logs out a - possibly - currently logged in account.
      * The possible redirection URI is queried from the redirection service
      * at first, before the actual logout takes place, and the session gets destroyed.
+     *
+     * @Flow\SkipCsrfProtection
      *
      * @return void
      */

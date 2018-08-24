@@ -25,23 +25,23 @@ use Neos\Fusion\Exception as Exceptions;
 use Neos\Fusion\Exception;
 use Neos\Flow\Security\Exception as SecurityException;
 use Neos\Fusion\Exception\RuntimeException;
-use Neos\Fusion\TypoScriptObjects\AbstractArrayTypoScriptObject;
-use Neos\Fusion\TypoScriptObjects\AbstractTypoScriptObject;
+use Neos\Fusion\FusionObjects\AbstractArrayFusionObject;
+use Neos\Fusion\FusionObjects\AbstractFusionObject;
 use Neos\Eel\Utility as EelUtility;
 
 /**
- * TypoScript Runtime
+ * Fusion Runtime
  *
- * TypoScript Rendering Process
+ * Fusion Rendering Process
  * ============================
  *
- * During rendering, all TypoScript objects form a tree.
+ * During rendering, all Fusion objects form a tree.
  *
- * When a TypoScript object at a certain $typoScriptPath is invoked, it has
+ * When a Fusion object at a certain $fusionPath is invoked, it has
  * access to all variables stored in the $context (which is an array).
  *
- * The TypoScript object can then add or replace variables to this context using pushContext()
- * or pushContextArray(), before rendering sub-TypoScript objects. After rendering
+ * The Fusion object can then add or replace variables to this context using pushContext()
+ * or pushContextArray(), before rendering sub-Fusion objects. After rendering
  * these, it must call popContext() to reset the context to the last state.
  */
 class Runtime
@@ -89,7 +89,7 @@ class Runtime
     /**
      * @var array
      */
-    protected $typoScriptConfiguration;
+    protected $fusionConfiguration;
 
     /**
      * @var ControllerContext
@@ -127,14 +127,14 @@ class Runtime
     protected $simpleTypeToArrayClosure;
 
     /**
-     * Constructor for the TypoScript Runtime
+     * Constructor for the Fusion Runtime
      *
-     * @param array $typoScriptConfiguration
+     * @param array $fusionConfiguration
      * @param ControllerContext $controllerContext
      */
-    public function __construct(array $typoScriptConfiguration, ControllerContext $controllerContext)
+    public function __construct(array $fusionConfiguration, ControllerContext $controllerContext)
     {
-        $this->typoScriptConfiguration = $typoScriptConfiguration;
+        $this->fusionConfiguration = $fusionConfiguration;
         $this->controllerContext = $controllerContext;
         $this->runtimeContentCache = new RuntimeContentCache($this);
 
@@ -230,15 +230,15 @@ class Runtime
     }
 
     /**
-     * Evaluate an absolute TypoScript path and return the result
+     * Evaluate an absolute Fusion path and return the result
      *
-     * @param string $typoScriptPath
+     * @param string $fusionPath
      * @param object $contextObject the object available as "this" in Eel expressions. ONLY FOR INTERNAL USE!
      * @return mixed the result of the evaluation, can be a string but also other data types
      */
-    public function evaluate($typoScriptPath, $contextObject = null)
+    public function evaluate($fusionPath, $contextObject = null)
     {
-        return $this->evaluateInternal($typoScriptPath, self::BEHAVIOR_RETURNNULL, $contextObject);
+        return $this->evaluateInternal($fusionPath, self::BEHAVIOR_RETURNNULL, $contextObject);
     }
 
     /**
@@ -250,23 +250,23 @@ class Runtime
     }
 
     /**
-     * Render an absolute TypoScript path and return the result.
+     * Render an absolute Fusion path and return the result.
      *
      * Compared to $this->evaluate, this adds some more comments helpful for debugging.
      *
-     * @param string $typoScriptPath
+     * @param string $fusionPath
      * @return string
      * @throws \Exception
      * @throws SecurityException
      */
-    public function render($typoScriptPath)
+    public function render($fusionPath)
     {
         try {
-            $output = $this->evaluateInternal($typoScriptPath, self::BEHAVIOR_EXCEPTION);
+            $output = $this->evaluateInternal($fusionPath, self::BEHAVIOR_EXCEPTION);
             if ($this->debugMode) {
                 $output = sprintf('%1$s<!-- Beginning to render TS path "%2$s" (Context: %3$s) -->%4$s%1$s<!-- End to render TS path "%2$s" (Context: %3$s) -->',
                     chr(10),
-                    $typoScriptPath,
+                    $fusionPath,
                     implode(', ', array_keys($this->getCurrentContext())),
                     $output
                 );
@@ -274,28 +274,28 @@ class Runtime
         } catch (SecurityException $securityException) {
             throw $securityException;
         } catch (\Exception $exception) {
-            $output = $this->handleRenderingException($typoScriptPath, $exception);
+            $output = $this->handleRenderingException($fusionPath, $exception);
         }
 
         return $output;
     }
 
     /**
-     * Handle an Exception thrown while rendering TypoScript according to
+     * Handle an Exception thrown while rendering Fusion according to
      * settings specified in Neos.Fusion.rendering.exceptionHandler
      *
-     * @param array $typoScriptPath
+     * @param string $fusionPath
      * @param \Exception $exception
      * @param boolean $useInnerExceptionHandler
      * @return string
      * @throws InvalidConfigurationException
      */
-    public function handleRenderingException($typoScriptPath, \Exception $exception, $useInnerExceptionHandler = false)
+    public function handleRenderingException($fusionPath, \Exception $exception, $useInnerExceptionHandler = false)
     {
-        $typoScriptConfiguration = $this->getConfigurationForPath($typoScriptPath);
+        $fusionConfiguration = $this->getConfigurationForPath($fusionPath);
 
-        if (isset($typoScriptConfiguration['__meta']['exceptionHandler'])) {
-            $exceptionHandlerClass = $typoScriptConfiguration['__meta']['exceptionHandler'];
+        if (isset($fusionConfiguration['__meta']['exceptionHandler'])) {
+            $exceptionHandlerClass = $fusionConfiguration['__meta']['exceptionHandler'];
             $invalidExceptionHandlerMessage = 'The class "%s" is not valid for property "@exceptionHandler".';
         } else {
             if ($useInnerExceptionHandler === true) {
@@ -327,41 +327,41 @@ class Runtime
         }
 
         $exceptionHandler->setRuntime($this);
-        if (array_key_exists('__objectType', $typoScriptConfiguration)) {
-            $typoScriptPath .= sprintf('<%s>', $typoScriptConfiguration['__objectType']);
+        if (array_key_exists('__objectType', $fusionConfiguration)) {
+            $fusionPath .= sprintf('<%s>', $fusionConfiguration['__objectType']);
         }
-        $output = $exceptionHandler->handleRenderingException($typoScriptPath, $exception);
+        $output = $exceptionHandler->handleRenderingException($fusionPath, $exception);
 
         return $output;
     }
 
     /**
-     * Determine if the given TypoScript path is renderable, which means it exists
+     * Determine if the given Fusion path is renderable, which means it exists
      * and has an implementation.
      *
-     * @param string $typoScriptPath
+     * @param string $fusionPath
      * @return boolean
      */
-    public function canRender($typoScriptPath)
+    public function canRender($fusionPath)
     {
-        $typoScriptConfiguration = $this->getConfigurationForPath($typoScriptPath);
+        $fusionConfiguration = $this->getConfigurationForPath($fusionPath);
 
-        return $this->canRenderWithConfiguration($typoScriptConfiguration);
+        return $this->canRenderWithConfiguration($fusionConfiguration);
     }
 
     /**
      * Internal evaluation if given configuration is renderable.
      *
-     * @param array $typoScriptConfiguration
+     * @param array $fusionConfiguration
      * @return boolean
      */
-    protected function canRenderWithConfiguration(array $typoScriptConfiguration)
+    protected function canRenderWithConfiguration(array $fusionConfiguration)
     {
-        if ($this->hasExpressionOrValue($typoScriptConfiguration)) {
+        if ($this->hasExpressionOrValue($fusionConfiguration)) {
             return true;
         }
 
-        if (isset($typoScriptConfiguration['__meta']['class']) && isset($typoScriptConfiguration['__objectType'])) {
+        if (isset($fusionConfiguration['__meta']['class']) && isset($fusionConfiguration['__objectType'])) {
             return true;
         }
 
@@ -369,9 +369,9 @@ class Runtime
     }
 
     /**
-     * Internal evaluation method of absolute $typoScriptPath
+     * Internal evaluation method of absolute $fusionPath
      *
-     * @param string $typoScriptPath
+     * @param string $fusionPath
      * @param string $behaviorIfPathNotFound one of BEHAVIOR_EXCEPTION or BEHAVIOR_RETURNNULL
      * @param mixed $contextObject the object which will be "this" in Eel expressions, if any
      * @return mixed
@@ -381,28 +381,28 @@ class Runtime
      * @throws Exception
      * @throws RuntimeException
      */
-    protected function evaluateInternal($typoScriptPath, $behaviorIfPathNotFound, $contextObject = null)
+    protected function evaluateInternal($fusionPath, $behaviorIfPathNotFound, $contextObject = null)
     {
         $needToPopContext = false;
         $this->lastEvaluationStatus = self::EVALUATION_EXECUTED;
-        $typoScriptConfiguration = $this->getConfigurationForPath($typoScriptPath);
-        $cacheContext = $this->runtimeContentCache->enter(isset($typoScriptConfiguration['__meta']['cache']) ? $typoScriptConfiguration['__meta']['cache'] : [], $typoScriptPath);
+        $fusionConfiguration = $this->getConfigurationForPath($fusionPath);
+        $cacheContext = $this->runtimeContentCache->enter(isset($fusionConfiguration['__meta']['cache']) ? $fusionConfiguration['__meta']['cache'] : [], $fusionPath);
 
-        if (!$this->canRenderWithConfiguration($typoScriptConfiguration)) {
+        if (!$this->canRenderWithConfiguration($fusionConfiguration)) {
             $this->finalizePathEvaluation($cacheContext);
-            $this->throwExceptionForUnrenderablePathIfNeeded($typoScriptPath, $typoScriptConfiguration, $behaviorIfPathNotFound);
+            $this->throwExceptionForUnrenderablePathIfNeeded($fusionPath, $fusionConfiguration, $behaviorIfPathNotFound);
             $this->lastEvaluationStatus = self::EVALUATION_SKIPPED;
             return null;
         }
 
         try {
-            if ($this->hasExpressionOrValue($typoScriptConfiguration)) {
-                return $this->evaluteExpressionOrValueInternal($typoScriptPath, $typoScriptConfiguration, $cacheContext, $contextObject);
+            if ($this->hasExpressionOrValue($fusionConfiguration)) {
+                return $this->evaluteExpressionOrValueInternal($fusionPath, $fusionConfiguration, $cacheContext, $contextObject);
             }
 
-            $typoScriptObject = $this->instantiateTypoScriptObject($typoScriptPath, $typoScriptConfiguration);
-            $needToPopContext = $this->prepareContextForTypoScriptObject($typoScriptObject, $typoScriptPath, $typoScriptConfiguration, $cacheContext);
-            $output = $this->evaluateObjectOrRetrieveFromCache($typoScriptObject, $typoScriptPath, $typoScriptConfiguration, $cacheContext);
+            $fusionObject = $this->instantiatefusionObject($fusionPath, $fusionConfiguration);
+            $needToPopContext = $this->prepareContextForFusionObject($fusionObject, $fusionPath, $fusionConfiguration, $cacheContext);
+            $output = $this->evaluateObjectOrRetrieveFromCache($fusionObject, $fusionPath, $fusionConfiguration, $cacheContext);
         } catch (StopActionException $stopActionException) {
             $this->finalizePathEvaluation($cacheContext, $needToPopContext);
             throw $stopActionException;
@@ -414,7 +414,7 @@ class Runtime
             throw $runtimeException;
         } catch (\Exception $exception) {
             $this->finalizePathEvaluation($cacheContext, $needToPopContext);
-            return $this->handleRenderingException($typoScriptPath, $exception, true);
+            return $this->handleRenderingException($fusionPath, $exception, true);
         }
 
         $this->finalizePathEvaluation($cacheContext, $needToPopContext);
@@ -422,77 +422,93 @@ class Runtime
     }
 
     /**
-     * Does the evaluation of a TypoScript instance, first checking the cache and if conditions and afterwards applying processors.
+     * Does the evaluation of a Fusion instance, first checking the cache and if conditions and afterwards applying processors.
      *
-     * @param AbstractTypoScriptObject $typoScriptObject
-     * @param string $typoScriptPath
-     * @param array $typoScriptConfiguration
+     * @param AbstractFusionObject $fusionObject
+     * @param string $fusionPath
+     * @param array $fusionConfiguration
      * @param array $cacheContext
      * @return mixed
      */
-    protected function evaluateObjectOrRetrieveFromCache($typoScriptObject, $typoScriptPath, $typoScriptConfiguration, $cacheContext)
+    protected function evaluateObjectOrRetrieveFromCache($fusionObject, $fusionPath, $fusionConfiguration, $cacheContext)
     {
         $output = null;
         $evaluationStatus = self::EVALUATION_SKIPPED;
-        list($cacheHit, $cachedResult) = $this->runtimeContentCache->preEvaluate($cacheContext, $typoScriptObject);
+        list($cacheHit, $cachedResult) = $this->runtimeContentCache->preEvaluate($cacheContext, $fusionObject);
         if ($cacheHit) {
             return $cachedResult;
         }
 
         $evaluateObject = true;
-        if ($this->evaluateIfCondition($typoScriptConfiguration, $typoScriptPath, $typoScriptObject) === false) {
+        if ($this->evaluateIfCondition($fusionConfiguration, $fusionPath, $fusionObject) === false) {
             $evaluateObject = false;
         }
 
         if ($evaluateObject) {
-            $output = $typoScriptObject->evaluate();
+            $output = $fusionObject->evaluate();
             $evaluationStatus = self::EVALUATION_EXECUTED;
         }
 
         $this->lastEvaluationStatus = $evaluationStatus;
 
         if ($evaluateObject) {
-            $output = $this->evaluateProcessors($output, $typoScriptConfiguration, $typoScriptPath, $typoScriptObject);
+            $output = $this->evaluateProcessors($output, $fusionConfiguration, $fusionPath, $fusionObject);
         }
-        $output = $this->runtimeContentCache->postProcess($cacheContext, $typoScriptObject, $output);
+        $output = $this->runtimeContentCache->postProcess($cacheContext, $fusionObject, $output);
         return $output;
     }
 
     /**
      * Evaluates an EEL expression or value, checking if conditions first and applying processors.
      *
-     * @param string $typoScriptPath
-     * @param array $typoScriptConfiguration
+     * @param string $fusionPath
+     * @param array $fusionConfiguration
      * @param array $cacheContext
      * @param mixed $contextObject
      * @return mixed
      */
-    protected function evaluteExpressionOrValueInternal($typoScriptPath, $typoScriptConfiguration, $cacheContext, $contextObject)
+    protected function evaluteExpressionOrValueInternal($fusionPath, $fusionConfiguration, $cacheContext, $contextObject)
     {
-        if ($this->evaluateIfCondition($typoScriptConfiguration, $typoScriptPath, $contextObject) === false) {
+        if ($this->evaluateIfCondition($fusionConfiguration, $fusionPath, $contextObject) === false) {
             $this->finalizePathEvaluation($cacheContext);
             $this->lastEvaluationStatus = self::EVALUATION_SKIPPED;
 
             return null;
         }
 
-        $evaluatedExpression = $this->evaluateEelExpressionOrSimpleValueWithProcessor($typoScriptPath, $typoScriptConfiguration, $contextObject);
+        $evaluatedExpression = $this->evaluateEelExpressionOrSimpleValueWithProcessor($fusionPath, $fusionConfiguration, $contextObject);
         $this->finalizePathEvaluation($cacheContext);
 
         return $evaluatedExpression;
     }
 
     /**
-     * Possibly prepares a new context for the current TypoScriptObject and cache context and pushes it to the stack.
+     * Possibly prepares a new context for the current FusionObject and cache context and pushes it to the stack.
      * Returns if a new context was pushed to the stack or not.
      *
-     * @param AbstractTypoScriptObject $typoScriptObject
-     * @param string $typoScriptPath
-     * @param array $typoScriptConfiguration
+     * @deprecated with 3.0 will be removed with 4.0
+     * @param AbstractFusionObject $fusionObject
+     * @param string $fusionPath
+     * @param array $fusionConfiguration
      * @param array $cacheContext
      * @return boolean
      */
-    protected function prepareContextForTypoScriptObject(AbstractTypoScriptObject $typoScriptObject, $typoScriptPath, $typoScriptConfiguration, $cacheContext)
+    protected function prepareContextForTypoScriptObject(AbstractFusionObject $fusionObject, $fusionPath, $fusionConfiguration, $cacheContext)
+    {
+        return $this->prepareContextForFusionObject($fusionObject, $fusionPath, $fusionConfiguration, $cacheContext);
+    }
+
+    /**
+     * Possibly prepares a new context for the current FusionObject and cache context and pushes it to the stack.
+     * Returns if a new context was pushed to the stack or not.
+     *
+     * @param AbstractFusionObject $fusionObject
+     * @param string $fusionPath
+     * @param array $fusionConfiguration
+     * @param array $cacheContext
+     * @return boolean
+     */
+    protected function prepareContextForFusionObject(AbstractFusionObject $fusionObject, $fusionPath, $fusionConfiguration, $cacheContext)
     {
         if ($cacheContext['cacheForPathDisabled'] === true) {
             $contextArray = $this->getCurrentContext();
@@ -504,10 +520,10 @@ class Runtime
             }
         }
 
-        if (isset($typoScriptConfiguration['__meta']['context'])) {
+        if (isset($fusionConfiguration['__meta']['context'])) {
             $newContextArray = isset($newContextArray) ? $newContextArray : $this->getCurrentContext();
-            foreach ($typoScriptConfiguration['__meta']['context'] as $contextKey => $contextValue) {
-                $newContextArray[$contextKey] = $this->evaluateInternal($typoScriptPath . '/__meta/context/' . $contextKey, self::BEHAVIOR_EXCEPTION, $typoScriptObject);
+            foreach ($fusionConfiguration['__meta']['context'] as $contextKey => $contextValue) {
+                $newContextArray[$contextKey] = $this->evaluateInternal($fusionPath . '/__meta/context/' . $contextKey, self::BEHAVIOR_EXCEPTION, $fusionObject);
             }
         }
 
@@ -520,7 +536,7 @@ class Runtime
     }
 
     /**
-     * Ends the evaluation of a typoscript path by popping the context stack if needed and leaving the cache context.
+     * Ends the evaluation of a fusion path by popping the context stack if needed and leaving the cache context.
      *
      * @param array $cacheContext
      * @param boolean $needToPopContext
@@ -536,20 +552,20 @@ class Runtime
     }
 
     /**
-     * Get the TypoScript Configuration for the given TypoScript path
+     * Get the Fusion Configuration for the given Fusion path
      *
-     * @param string $typoScriptPath
+     * @param string $fusionPath
      * @return array
      * @throws Exception
      */
-    protected function getConfigurationForPath($typoScriptPath)
+    protected function getConfigurationForPath($fusionPath)
     {
-        if (isset($this->configurationOnPathRuntimeCache[$typoScriptPath])) {
-            return $this->configurationOnPathRuntimeCache[$typoScriptPath]['c'];
+        if (isset($this->configurationOnPathRuntimeCache[$fusionPath])) {
+            return $this->configurationOnPathRuntimeCache[$fusionPath]['c'];
         }
 
-        $pathParts = explode('/', $typoScriptPath);
-        $configuration = $this->typoScriptConfiguration;
+        $pathParts = explode('/', $fusionPath);
+        $configuration = $this->fusionConfiguration;
 
         $pathUntilNow = '';
         $currentPrototypeDefinitions = array();
@@ -642,7 +658,7 @@ class Runtime
             foreach ($prototypeMergingOrder as $prototypeName) {
                 if (!array_key_exists($prototypeName, $currentPrototypeDefinitions)) {
                     throw new Exception(sprintf(
-                        'The TypoScript object `%s` which you tried to inherit from does not exist.
+                        'The Fusion object `%s` which you tried to inherit from does not exist.
 									Maybe you have a typo on the right hand side of your inheritance statement for `%s`.',
                         $prototypeName, $currentPathSegmentType), 1427134340);
                 }
@@ -666,93 +682,132 @@ class Runtime
     }
 
     /**
-     * Instantiates a TypoScript object specified by the given path and configuration
+     * Instantiates a Fusion object specified by the given path and configuration
      *
-     * @param string $typoScriptPath Path to the configuration for this object instance
-     * @param array $typoScriptConfiguration Configuration at the given path
-     * @return AbstractTypoScriptObject
+     * @deprecated with 3.0 will be removed with 4.0
+     * @param string $fusionPath Path to the configuration for this object instance
+     * @param array $fusionConfiguration Configuration at the given path
+     * @return AbstractFusionObject
      * @throws Exception
      */
-    protected function instantiateTypoScriptObject($typoScriptPath, $typoScriptConfiguration)
+    protected function instantiateTypoScriptObject($fusionPath, $fusionConfiguration)
     {
-        $typoScriptObjectType = $typoScriptConfiguration['__objectType'];
+        return $this->instantiateFusionObject($fusionPath, $fusionConfiguration);
+    }
 
-        $tsObjectClassName = isset($typoScriptConfiguration['__meta']['class']) ? $typoScriptConfiguration['__meta']['class'] : null;
+    /**
+     * Instantiates a Fusion object specified by the given path and configuration
+     *
+     * @param string $fusionPath Path to the configuration for this object instance
+     * @param array $fusionConfiguration Configuration at the given path
+     * @return AbstractFusionObject
+     * @throws Exception
+     */
+    protected function instantiateFusionObject($fusionPath, $fusionConfiguration)
+    {
+        $fusionObjectType = $fusionConfiguration['__objectType'];
 
-        if (!preg_match('#<[^>]*>$#', $typoScriptPath)) {
-            // Only add TypoScript object type to last path part if not already set
-            $typoScriptPath .= '<' . $typoScriptObjectType . '>';
+        $fusionObjectClassName = isset($fusionConfiguration['__meta']['class']) ? $fusionConfiguration['__meta']['class'] : null;
+
+        if (!preg_match('#<[^>]*>$#', $fusionPath)) {
+            // Only add Fusion object type to last path part if not already set
+            $fusionPath .= '<' . $fusionObjectType . '>';
         }
-        if (!class_exists($tsObjectClassName)) {
+        if (!class_exists($fusionObjectClassName)) {
             throw new Exception(sprintf(
-                'The implementation class `%s` defined for TypoScript object of type `%s` does not exist.
+                'The implementation class `%s` defined for Fusion object of type `%s` does not exist.
 				Maybe a typo in the `@class` property.',
-                $tsObjectClassName, $typoScriptObjectType), 1347952109);
+                $fusionObjectClassName, $fusionObjectType), 1347952109);
         }
 
-        /** @var $typoScriptObject AbstractTypoScriptObject */
-        $typoScriptObject = new $tsObjectClassName($this, $typoScriptPath, $typoScriptObjectType);
-        if ($this->isArrayTypoScriptObject($typoScriptObject)) {
-            /** @var $typoScriptObject AbstractArrayTypoScriptObject */
-            if (isset($typoScriptConfiguration['__meta']['ignoreProperties'])) {
-                $evaluatedIgnores = $this->evaluate($typoScriptPath . '/__meta/ignoreProperties', $typoScriptObject);
-                $typoScriptObject->setIgnoreProperties(is_array($evaluatedIgnores) ? $evaluatedIgnores : array());
+        /** @var $fusionObject AbstractFusionObject */
+        $fusionObject = new $fusionObjectClassName($this, $fusionPath, $fusionObjectType);
+        if ($this->isArrayFusionObject($fusionObject)) {
+            /** @var $fusionObject AbstractArrayFusionObject */
+            if (isset($fusionConfiguration['__meta']['ignoreProperties'])) {
+                $evaluatedIgnores = $this->evaluate($fusionPath . '/__meta/ignoreProperties', $fusionObject);
+                $fusionObject->setIgnoreProperties(is_array($evaluatedIgnores) ? $evaluatedIgnores : array());
             }
-            $this->setPropertiesOnTypoScriptObject($typoScriptObject, $typoScriptConfiguration);
+            $this->setPropertiesOnFusionObject($fusionObject, $fusionConfiguration);
         }
-        return $typoScriptObject;
+        return $fusionObject;
     }
 
     /**
      * Check if the given object is an array like object that should get all properties set to iterate or process internally.
      *
-     * @param AbstractTypoScriptObject $typoScriptObject
+     * @deprecated with 3.0 will be removed with 4.0
+     * @param AbstractFusionObject $fusionObject
      * @return boolean
      */
-    protected function isArrayTypoScriptObject(AbstractTypoScriptObject $typoScriptObject)
+    protected function isArrayTypoScriptObject(AbstractFusionObject $fusionObject)
     {
-        return ($typoScriptObject instanceof AbstractArrayTypoScriptObject);
+        return $this->isArrayFusionObject($fusionObject);
     }
 
     /**
-     * Does the given TypoScript configuration array hold an EEL expression or simple value.
+     * Check if the given object is an array like object that should get all properties set to iterate or process internally.
      *
-     * @param array $typoScriptConfiguration
+     * @param AbstractFusionObject $fusionObject
      * @return boolean
      */
-    protected function hasExpressionOrValue(array $typoScriptConfiguration)
+    protected function isArrayFusionObject(AbstractFusionObject $fusionObject)
     {
-        return isset($typoScriptConfiguration['__eelExpression']) || isset($typoScriptConfiguration['__value']);
+        return ($fusionObject instanceof AbstractArrayFusionObject);
     }
 
     /**
-     * Set options on the given (AbstractArray)TypoScript object
+     * Does the given Fusion configuration array hold an EEL expression or simple value.
      *
-     * @param AbstractArrayTypoScriptObject $typoScriptObject
-     * @param array $typoScriptConfiguration
+     * @param array $fusionConfiguration
+     * @return boolean
+     */
+    protected function hasExpressionOrValue(array $fusionConfiguration)
+    {
+        return isset($fusionConfiguration['__eelExpression']) || isset($fusionConfiguration['__value']);
+    }
+
+    /**
+     * Set options on the given (AbstractArray)Fusion object
+     *
+     * @deprecated with 3.0 will be removed with 4.0
+     * @param AbstractArrayFusionObject $fusionObject
+     * @param array $fusionConfiguration
      * @return void
      */
-    protected function setPropertiesOnTypoScriptObject(AbstractArrayTypoScriptObject $typoScriptObject, array $typoScriptConfiguration)
+    protected function setPropertiesOnTypoScriptObject(AbstractArrayFusionObject $fusionObject, array $fusionConfiguration)
     {
-        foreach ($typoScriptConfiguration as $key => $value) {
+        $this->setPropertiesOnFusionObject($fusionObject, $fusionConfiguration);
+    }
+
+    /**
+     * Set options on the given (AbstractArray)Fusion object
+     *
+     * @param AbstractArrayFusionObject $fusionObject
+     * @param array $fusionConfiguration
+     * @return void
+     */
+    protected function setPropertiesOnFusionObject(AbstractArrayFusionObject $fusionObject, array $fusionConfiguration)
+    {
+        foreach ($fusionConfiguration as $key => $value) {
             // skip keys which start with __, as they are purely internal.
             if ($key[0] === '_' && $key[1] === '_' && in_array($key, Parser::$reservedParseTreeKeys, true)) {
                 continue;
             }
 
-            ObjectAccess::setProperty($typoScriptObject, $key, $value);
+            ObjectAccess::setProperty($fusionObject, $key, $value);
         }
     }
 
     /**
      * Evaluate a simple value or eel expression with processors
      *
-     * @param string $typoScriptPath the TypoScript path up to now
-     * @param array $valueConfiguration TypoScript configuration for the value
-     * @param \Neos\Fusion\TypoScriptObjects\AbstractTypoScriptObject $contextObject An optional object for the "this" value inside the context
+     * @param string $fusionPath the Fusion path up to now
+     * @param array $valueConfiguration Fusion configuration for the value
+     * @param \Neos\Fusion\FusionObjects\AbstractFusionObject $contextObject An optional object for the "this" value inside the context
      * @return mixed The result of the evaluation
      */
-    protected function evaluateEelExpressionOrSimpleValueWithProcessor($typoScriptPath, array $valueConfiguration, AbstractTypoScriptObject $contextObject = null)
+    protected function evaluateEelExpressionOrSimpleValueWithProcessor($fusionPath, array $valueConfiguration, AbstractFusionObject $contextObject = null)
     {
         if (isset($valueConfiguration['__eelExpression'])) {
             $evaluatedValue = $this->evaluateEelExpression($valueConfiguration['__eelExpression'], $contextObject);
@@ -761,7 +816,7 @@ class Runtime
             $evaluatedValue = $valueConfiguration['__value'];
         }
 
-        $evaluatedValue = $this->evaluateProcessors($evaluatedValue, $valueConfiguration, $typoScriptPath, $contextObject);
+        $evaluatedValue = $this->evaluateProcessors($evaluatedValue, $valueConfiguration, $fusionPath, $contextObject);
 
         return $evaluatedValue;
     }
@@ -770,11 +825,11 @@ class Runtime
      * Evaluate an Eel expression
      *
      * @param string $expression The Eel expression to evaluate
-     * @param \Neos\Fusion\TypoScriptObjects\AbstractTypoScriptObject $contextObject An optional object for the "this" value inside the context
+     * @param \Neos\Fusion\FusionObjects\AbstractFusionObject $contextObject An optional object for the "this" value inside the context
      * @return mixed The result of the evaluated Eel expression
      * @throws Exception
      */
-    protected function evaluateEelExpression($expression, AbstractTypoScriptObject $contextObject = null)
+    protected function evaluateEelExpression($expression, AbstractFusionObject $contextObject = null)
     {
         if ($expression[0] !== '$' || $expression[1] !== '{') {
             // We still assume this is an EEL expression and wrap the markers for backwards compatibility.
@@ -784,7 +839,7 @@ class Runtime
         $contextVariables = array_merge($this->getDefaultContextVariables(), $this->getCurrentContext());
 
         if (isset($contextVariables['this'])) {
-            throw new Exception('Context variable "this" not allowed, as it is already reserved for a pointer to the current TypoScript object.', 1344325044);
+            throw new Exception('Context variable "this" not allowed, as it is already reserved for a pointer to the current Fusion object.', 1344325044);
         }
         $contextVariables['this'] = $contextObject;
 
@@ -800,17 +855,17 @@ class Runtime
      *
      * @param mixed $valueToProcess
      * @param array $configurationWithEventualProcessors
-     * @param string $typoScriptPath
-     * @param AbstractTypoScriptObject $contextObject
+     * @param string $fusionPath
+     * @param AbstractFusionObject $contextObject
      * @return mixed
      */
-    protected function evaluateProcessors($valueToProcess, $configurationWithEventualProcessors, $typoScriptPath, AbstractTypoScriptObject $contextObject = null)
+    protected function evaluateProcessors($valueToProcess, $configurationWithEventualProcessors, $fusionPath, AbstractFusionObject $contextObject = null)
     {
         if (isset($configurationWithEventualProcessors['__meta']['process'])) {
             $processorConfiguration = $configurationWithEventualProcessors['__meta']['process'];
             $positionalArraySorter = new PositionalArraySorter($processorConfiguration, '__meta.position');
             foreach ($positionalArraySorter->getSortedKeys() as $key) {
-                $processorPath = $typoScriptPath . '/__meta/process/' . $key;
+                $processorPath = $fusionPath . '/__meta/process/' . $key;
                 if ($this->evaluateIfCondition($processorConfiguration[$key], $processorPath, $contextObject) === false) {
                     continue;
                 }
@@ -835,15 +890,15 @@ class Runtime
      *
      * @param array $configurationWithEventualIf
      * @param string $configurationPath
-     * @param AbstractTypoScriptObject $contextObject
+     * @param AbstractFusionObject $contextObject
      * @return boolean
      */
-    protected function evaluateIfCondition($configurationWithEventualIf, $configurationPath, AbstractTypoScriptObject $contextObject = null)
+    protected function evaluateIfCondition($configurationWithEventualIf, $configurationPath, AbstractFusionObject $contextObject = null)
     {
         if (isset($configurationWithEventualIf['__meta']['if'])) {
             foreach ($configurationWithEventualIf['__meta']['if'] as $conditionKey => $conditionValue) {
                 $conditionValue = $this->evaluateInternal($configurationPath . '/__meta/if/' . $conditionKey, self::BEHAVIOR_EXCEPTION, $contextObject);
-                if ($conditionValue === false) {
+                if ((bool)$conditionValue === false) {
                     return false;
                 }
             }
@@ -883,29 +938,29 @@ class Runtime
     /**
      * Checks and throws an exception for an unrenderable path.
      *
-     * @param string $typoScriptPath The TypoScript path that cannot be rendered
-     * @param array $typoScriptConfiguration
+     * @param string $fusionPath The Fusion path that cannot be rendered
+     * @param array $fusionConfiguration
      * @param string $behaviorIfPathNotFound One of the BEHAVIOR_* constants
-     * @throws Exception\MissingTypoScriptImplementationException
-     * @throws Exception\MissingTypoScriptObjectException
+     * @throws Exception\MissingFusionImplementationException
+     * @throws Exception\MissingFusionObjectException
      */
-    protected function throwExceptionForUnrenderablePathIfNeeded($typoScriptPath, $typoScriptConfiguration, $behaviorIfPathNotFound)
+    protected function throwExceptionForUnrenderablePathIfNeeded($fusionPath, $fusionConfiguration, $behaviorIfPathNotFound)
     {
-        if (isset($typoScriptConfiguration['__objectType'])) {
-            $objectType = $typoScriptConfiguration['__objectType'];
-            throw new Exceptions\MissingTypoScriptImplementationException(sprintf(
-                "The TypoScript object at path `%s` could not be rendered:
-					The TypoScript object `%s` is not completely defined (missing property `@class`).
+        if (isset($fusionConfiguration['__objectType'])) {
+            $objectType = $fusionConfiguration['__objectType'];
+            throw new Exceptions\MissingFusionImplementationException(sprintf(
+                "The Fusion object at path `%s` could not be rendered:
+					The Fusion object `%s` is not completely defined (missing property `@class`).
 					Most likely you didn't inherit from a basic object.
-					For example you could add the following line to your TypoScript:
+					For example you could add the following line to your Fusion:
 					`prototype(%s) < prototype(Neos.Fusion:Template)`",
-                $typoScriptPath, $objectType, $objectType), 1332493995);
+                $fusionPath, $objectType, $objectType), 1332493995);
         }
 
         if ($behaviorIfPathNotFound === self::BEHAVIOR_EXCEPTION) {
-            throw new Exceptions\MissingTypoScriptObjectException(sprintf(
-                'No TypoScript object found in path "%s"
-					Please make sure to define one in your TypoScript configuration.', $typoScriptPath
+            throw new Exceptions\MissingFusionObjectException(sprintf(
+                'No Fusion object found in path "%s"
+					Please make sure to define one in your Fusion configuration.', $fusionPath
             ), 1332493990);
         }
     }
@@ -928,7 +983,7 @@ class Runtime
     }
 
     /**
-     * If the TypoScript content cache should be enabled at all
+     * If the Fusion content cache should be enabled at all
      *
      * @param boolean $flag
      * @return void

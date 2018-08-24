@@ -8,11 +8,11 @@ Introduction
 ============
 
 The frontend rendering of a document node in Neos can involve many queries and operations. Doing this for every request
-would be too slow to achieve a feasible response time. The content cache is a feature of TypoScript and supports a
+would be too slow to achieve a feasible response time. The content cache is a feature of Fusion and supports a
 configurable and nested cache that can answer many requests directly from the cache without expensive operations. It is
 based on the Flow caching framework that supports many different cache backends, expiration and tagging.
 
-Each TypoScript path (of type object) can have its own cache configuration. These cache configurations can be nested to
+Each Fusion path (of type object) can have its own cache configuration. These cache configurations can be nested to
 re-use parts of the content and have multiple cache entries with different properties on the same page. This could be a
 menu or section that is the same for many pages. The nesting support is also allows to have uncached content like
 plugins inside cached content.
@@ -36,11 +36,11 @@ Let's see how the content cache can help you to deliver a faster user experience
 The basics
 ==========
 
-The main TypoScript path is ``root``, you can find it in the file ``TypoScript/DefaultTypoScript.fusion`` in the
+The main Fusion path is ``root``, you can find it in the file ``Fusion/DefaultFusion.fusion`` in the
 ``Neos.Neos`` package. Here is a small part of this file that shows the outermost cache configuration of the ``root``
 path::
 
-	root = TYPO3.TypoScript:Case {
+	root = Neos.Fusion:Case {
 		default {
 			@position = 'end 9999'
 			condition = TRUE
@@ -86,7 +86,7 @@ In the ``@cache`` meta property the following subproperties are allowed:
   "discriminator" on every request and caches results differently depending on it's value. Dynamic cache mode is therefore
   much faster than ``uncached`` but slightly slower compared to ``cached`` mode. It is useful in situations where
   arguments (eg. from the request) lead to different rendering results. The ``context`` property should be set to configure
-  the TypoScript context variables that will be available when evaluating the uncached path.
+  the Fusion context variables that will be available when evaluating the uncached path.
 
 ``maximumLifetime``
   Set the maximum lifetime for the nearest cached path. Possible values are ``null`` (default), ``0`` (unlimited lifetime)
@@ -99,11 +99,11 @@ In the ``@cache`` meta property the following subproperties are allowed:
 ``entryIdentifier``
   Configure the cache entry identifier for mode ``cached`` or ``dynamic`` based on an array of values.
 
-  The prototype ``TYPO3.TypoScript:GlobalCacheIdentifiers`` will be used as the base object, so global values that
+  The prototype ``Neos.Fusion:GlobalCacheIdentifiers`` will be used as the base object, so global values that
   influence *all* cache entries can be added to that prototype, see :ref:`Global cache entry identifiers` for more
   details.
 
-  If this property is not set, the identifier is built from all TypoScript context values that are simple values or
+  If this property is not set, the identifier is built from all Fusion context values that are simple values or
   implement ``CacheAwareInterface``.
 
   The identifier string value will be a hash built over all array values including and sorted by their key.
@@ -123,8 +123,8 @@ In the ``@cache`` meta property the following subproperties are allowed:
   list.
 
 ``context``
-  Configure a list of variable names that will be stored from the TypoScript context for later rendering of a path with
-  mode ``uncached`` or ``dynamic``. Only values that are configured here will be available in TypoScript when the path is evaluated
+  Configure a list of variable names that will be stored from the Fusion context for later rendering of a path with
+  mode ``uncached`` or ``dynamic``. Only values that are configured here will be available in Fusion when the path is evaluated
   in subsequent request.
 
   Example from ``Plugin.fusion``::
@@ -140,7 +140,7 @@ In the ``@cache`` meta property the following subproperties are allowed:
 	}
 
 ``entryDiscriminator``
-  Configure an expression that uniquely discriminates different entries of a ``dynamic`` cached area. The expression or TypoScript
+  Configure an expression that uniquely discriminates different entries of a ``dynamic`` cached area. The expression or Fusion
   object must evaluate to a string to be used as discriminator and should be different for every cache entry you want to create for
   this ``dynamic`` cached area.
 
@@ -164,6 +164,26 @@ In the ``@cache`` meta property the following subproperties are allowed:
 	}
 
 
+When using ``dynamic`` as the cache mode, the cache can be *disabled* by setting the ``entryDiscriminator`` to ``false``.
+This can be used to make the cache behavior dependable on some context, i.e. the current request method::
+
+	prototype(Neos.NodeTypes:Form) {
+		@cache {
+			mode = 'dynamic'
+			entryIdentifier {
+			  node = ${node}
+			}
+			entryDiscriminator = ${request.httpRequest.methodSafe ? 'static' : false}
+			context {
+				1 = 'node'
+				2 = 'documentNode'
+			}
+		}
+	}
+
+In this example the Form will be ``cached`` unless the request method is unsafe (for example ``POST``) in which case it is
+switched to ``uncached``.
+
 .. _Cache Entry Tags:
 
 Cache Entry Tags
@@ -182,7 +202,7 @@ The following patterns of tags will be flushed by Neos:
 ``NodeType_[My.Package:NodeTypeName]``
   Flushes cache entries if any node with the given node type changes. ``[My.Package:NodeTypeName]`` needs to be
   replaced by any node type name. Inheritance will be taken into account, so for a changed node of type
-  ``Neos.Neos.NodeTypes:Page`` the tags ``NodeType_Neos.Neos.NodeTypes:Page`` and ``NodeType_Neos.Neos:Document``
+  ``Neos.NodeTypes:Page`` the tags ``NodeType_Neos.NodeTypes:Page`` and ``NodeType_Neos.Neos:Document``
   (and some more) will be flushed.
 
 ``Node_[Identifier]``
@@ -228,16 +248,16 @@ whole collection cache entry and cause it to re-render.
 Default cache configuration
 ===========================
 
-The following list of TypoScript prototypes is cached by default:
+The following list of Fusion prototypes is cached by default:
 
 * Neos.Neos:Breadcrumb
 * Neos.Neos:Menu
 * Neos.Neos:Page
 * Neos.Neos:ContentCollection (see note)
 
-The following list of TypoScript prototypes is uncached by default:
+The following list of Fusion prototypes is uncached by default:
 
-* Neos.Neos.NodeTypes:Form
+* Neos.NodeTypes:Form
 * Neos.Neos:Plugin
 
 .. note::
@@ -250,11 +270,11 @@ The following list of TypoScript prototypes is uncached by default:
 Overriding default cache configuration
 --------------------------------------
 
-You can override default cache configuration in your TypoScript::
+You can override default cache configuration in your Fusion::
 
 	prototype(Neos.Neos:PrimaryContent).@cache.mode = 'uncached'
 
-You can also override cache configuration for a specific TypoScript Path::
+You can also override cache configuration for a specific Fusion Path::
 
     page.body.content.main {
     	prototype(Neos.Neos:Plugin).@cache.mode = 'cached'
@@ -267,14 +287,14 @@ Global cache entry identifiers
 
 Information like the request format or base URI that was used to render a site might have impact on all generated URIs.
 Depending on the site or application other data might influence the uniqueness of cache entries. If an ``entryIdentifier``
-for a cached path is declared without an object type, it will default to ``TYPO3.TypoScript:GlobalCacheIdentifiers``::
+for a cached path is declared without an object type, it will default to ``Neos.Fusion:GlobalCacheIdentifiers``::
 
 	prototype(My.Package:ExampleNode) {
 		@cache {
 			mode = 'cached'
 
 			# This is the default if no object type is specified
-			# entryIdentifier = TYPO3.TypoScript:GlobalCacheIdentifiers
+			# entryIdentifier = Neos.Fusion:GlobalCacheIdentifiers
 			entryIdentifier {
 				someValue = ${q(node).property('someValue')}
 			}
@@ -284,21 +304,28 @@ for a cached path is declared without an object type, it will default to ``TYPO3
 This prototype can be extended to add or remove custom global values that influence *all* cache entries without a specific
 object type::
 
-	prototype(TYPO3.TypoScript:GlobalCacheIdentifiers) {
+	prototype(Neos.Fusion:GlobalCacheIdentifiers) {
 		myRequestArgument = ${request.arguments.myArgument}
 	}
 
-You can use a ``TYPO3.TypoScript:RawArray`` to explicitly specify the values that are used for the entry identifier::
+You can use a ``Neos.Fusion:RawArray`` to explicitly specify the values that are used for the entry identifier::
 
 	prototype(My.Package:ExampleNode) {
 		@cache {
 			mode = 'cached'
 
-			entryIdentifier = TYPO3.TypoScript:RawArray {
+			entryIdentifier = Neos.Fusion:RawArray {
 				someValue = ${q(node).property('someValue')}
 			}
 		}
 	}
+
+Security Context
+----------------
+In addition to entry identifiers configured in Fusion, the Security Context Hash
+is added to the identifier of all cached segments. This hash is build from the roles of
+all authenticated accounts and cache identifiers from custom global objects (exposed through Neos.Flow.aop.globalObjects)
+implementing CacheAwareInterface. [#]_
 
 Tuning your cache
 =================
@@ -309,8 +336,12 @@ Change the cache backend
 By default, all cache entries are stored on the local filesystem. You can change this in ``Caches.yaml``,
 the example below will use the Redis backend for the content cache::
 
-	TYPO3_TypoScript_Content:
-	  backend: TYPO3\Flow\Cache\Backend\RedisBackend
+	Neos_Fusion_Content:
+	  backend: Neos\Flow\Cache\Backend\RedisBackend
 
 .. note::
 	The best practice is to change the cache configuration in your distribution.
+
+-----
+
+.. [#] Custom Global Objects are explained in detail in the Flow documentation: http://flowframework.readthedocs.io/en/stable/TheDefinitiveGuide/PartIII/Security.html#content-security-entityprivilege.

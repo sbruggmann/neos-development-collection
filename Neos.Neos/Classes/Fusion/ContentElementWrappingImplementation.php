@@ -16,12 +16,12 @@ use Neos\Flow\Security\Authorization\PrivilegeManagerInterface;
 use Neos\Neos\Domain\Service\ContentContext;
 use Neos\Neos\Service\ContentElementWrappingService;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\Fusion\TypoScriptObjects\AbstractTypoScriptObject;
+use Neos\Fusion\FusionObjects\AbstractFusionObject;
 
 /**
  * Adds meta data attributes to the processed Content Element
  */
-class ContentElementWrappingImplementation extends AbstractTypoScriptObject
+class ContentElementWrappingImplementation extends AbstractFusionObject
 {
     /**
      * @Flow\Inject
@@ -42,11 +42,11 @@ class ContentElementWrappingImplementation extends AbstractTypoScriptObject
      */
     public function getValue()
     {
-        return $this->tsValue('value');
+        return $this->fusionValue('value');
     }
 
     /**
-     * Evaluate this TypoScript object and return the result
+     * Evaluate this Fusion object and return the result
      *
      * @return mixed
      */
@@ -55,7 +55,7 @@ class ContentElementWrappingImplementation extends AbstractTypoScriptObject
         $content = $this->getValue();
 
         /** @var $node NodeInterface */
-        $node = $this->tsValue('node');
+        $node = $this->fusionValue('node');
         if (!$node instanceof NodeInterface) {
             return $content;
         }
@@ -74,29 +74,38 @@ class ContentElementWrappingImplementation extends AbstractTypoScriptObject
             $content = '';
         }
 
-        if ($this->tsValue('renderCurrentDocumentMetadata')) {
-            return $this->contentElementWrappingService->wrapCurrentDocumentMetadata($node, $content, $this->getContentElementTypoScriptPath());
+        if ($this->fusionValue('renderCurrentDocumentMetadata')) {
+            return $this->contentElementWrappingService->wrapCurrentDocumentMetadata($node, $content, $this->getContentElementFusionPath());
         }
 
-        return $this->contentElementWrappingService->wrapContentObject($node, $content, $this->getContentElementTypoScriptPath());
+        return $this->contentElementWrappingService->wrapContentObject($node, $content, $this->getContentElementFusionPath());
     }
 
     /**
-     * Returns the TypoScript path to the wrapped Content Element
+     * Returns the Fusion path to the wrapped Content Element
      *
      * @return string
      */
-    protected function getContentElementTypoScriptPath()
+    protected function getContentElementFusionPath()
     {
-        $typoScriptPathSegments = explode('/', $this->path);
-        $numberOfTypoScriptPathSegments = count($typoScriptPathSegments);
-        if (isset($typoScriptPathSegments[$numberOfTypoScriptPathSegments - 3])
-            && $typoScriptPathSegments[$numberOfTypoScriptPathSegments - 3] === '__meta'
-            && isset($typoScriptPathSegments[$numberOfTypoScriptPathSegments - 2])
-            && $typoScriptPathSegments[$numberOfTypoScriptPathSegments - 2] === 'process') {
+        $fusionPathSegments = explode('/', $this->path);
+        $numberOfFusionPathSegments = count($fusionPathSegments);
+        if (isset($fusionPathSegments[$numberOfFusionPathSegments - 3])
+            && $fusionPathSegments[$numberOfFusionPathSegments - 3] === '__meta'
+            && isset($fusionPathSegments[$numberOfFusionPathSegments - 2])
+            && $fusionPathSegments[$numberOfFusionPathSegments - 2] === 'process') {
 
-            // cut of the processing segments "__meta/process/contentElementWrapping<Neos.Neos:ContentElementWrapping>"
-            return implode('/', array_slice($typoScriptPathSegments, 0, -3));
+            // cut off the SHORT processing syntax "__meta/process/contentElementWrapping<Neos.Neos:ContentElementWrapping>"
+            return implode('/', array_slice($fusionPathSegments, 0, -3));
+        }
+
+        if (isset($fusionPathSegments[$numberOfFusionPathSegments - 4])
+            && $fusionPathSegments[$numberOfFusionPathSegments - 4] === '__meta'
+            && isset($fusionPathSegments[$numberOfFusionPathSegments - 3])
+            && $fusionPathSegments[$numberOfFusionPathSegments - 3] === 'process') {
+
+            // cut off the LONG processing syntax "__meta/process/contentElementWrapping/expression<Neos.Neos:ContentElementWrapping>"
+            return implode('/', array_slice($fusionPathSegments, 0, -4));
         }
         return $this->path;
     }

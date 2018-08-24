@@ -1,3 +1,2 @@
-TYPO3_TypoScript_Content:
+Neos_Fusion_Content:
   backend: Neos\Cache\Backend\TransientMemoryBackend
-  backendOptions: ~

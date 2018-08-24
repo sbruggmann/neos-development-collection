@@ -14,13 +14,13 @@ namespace Neos\Neos\Fusion;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Log\SystemLoggerInterface;
 use Neos\Neos\Service\LinkingService;
-use Neos\Fusion\TypoScriptObjects\AbstractTypoScriptObject;
+use Neos\Fusion\FusionObjects\AbstractFusionObject;
 use Neos\Neos\Exception as NeosException;
 
 /**
  * Create a link to a node
  */
-class NodeUriImplementation extends AbstractTypoScriptObject
+class NodeUriImplementation extends AbstractFusionObject
 {
     /**
      * @Flow\Inject
@@ -41,17 +41,7 @@ class NodeUriImplementation extends AbstractTypoScriptObject
      */
     public function getNode()
     {
-        return $this->tsValue('node');
-    }
-
-    /**
-     * Additional arguments to be passed to the UriBuilder (for example pagination parameters)
-     *
-     * @return array
-     */
-    public function getArguments()
-    {
-        return $this->tsValue('arguments');
+        return $this->fusionValue('node');
     }
 
     /**
@@ -61,7 +51,7 @@ class NodeUriImplementation extends AbstractTypoScriptObject
      */
     public function getFormat()
     {
-        return $this->tsValue('format');
+        return $this->fusionValue('format');
     }
 
     /**
@@ -71,7 +61,7 @@ class NodeUriImplementation extends AbstractTypoScriptObject
      */
     public function getSection()
     {
-        return (string)$this->tsValue('section');
+        return (string)$this->fusionValue('section');
     }
 
     /**
@@ -81,7 +71,7 @@ class NodeUriImplementation extends AbstractTypoScriptObject
      */
     public function getAdditionalParams()
     {
-        return $this->tsValue('additionalParams');
+        return $this->fusionValue('additionalParams');
     }
 
     /**
@@ -91,7 +81,7 @@ class NodeUriImplementation extends AbstractTypoScriptObject
      */
     public function getArgumentsToBeExcludedFromQueryString()
     {
-        return $this->tsValue('argumentsToBeExcludedFromQueryString');
+        return $this->fusionValue('argumentsToBeExcludedFromQueryString');
     }
 
     /**
@@ -101,7 +91,7 @@ class NodeUriImplementation extends AbstractTypoScriptObject
      */
     public function getAddQueryString()
     {
-        return (boolean)$this->tsValue('addQueryString');
+        return (boolean)$this->fusionValue('addQueryString');
     }
 
     /**
@@ -111,17 +101,17 @@ class NodeUriImplementation extends AbstractTypoScriptObject
      */
     public function isAbsolute()
     {
-        return (boolean)$this->tsValue('absolute');
+        return (boolean)$this->fusionValue('absolute');
     }
 
     /**
-     * The name of the base node inside the TypoScript context to use for resolving relative paths.
+     * The name of the base node inside the Fusion context to use for resolving relative paths.
      *
      * @return string
      */
     public function getBaseNodeName()
     {
-        return $this->tsValue('baseNodeName');
+        return $this->fusionValue('baseNodeName');
     }
 
     /**
@@ -134,16 +124,16 @@ class NodeUriImplementation extends AbstractTypoScriptObject
     {
         $baseNode = null;
         $baseNodeName = $this->getBaseNodeName() ?: 'documentNode';
-        $currentContext = $this->tsRuntime->getCurrentContext();
+        $currentContext = $this->runtime->getCurrentContext();
         if (isset($currentContext[$baseNodeName])) {
             $baseNode = $currentContext[$baseNodeName];
         } else {
-            throw new NeosException(sprintf('Could not find a node instance in TypoScript context with name "%s" and no node instance was given to the node argument. Set a node instance in the TypoScript context or pass a node object to resolve the URI.', $baseNodeName), 1373100400);
+            throw new NeosException(sprintf('Could not find a node instance in Fusion context with name "%s" and no node instance was given to the node argument. Set a node instance in the Fusion context or pass a node object to resolve the URI.', $baseNodeName), 1373100400);
         }
 
         try {
             return $this->linkingService->createNodeUri(
-                $this->tsRuntime->getControllerContext(),
+                $this->runtime->getControllerContext(),
                 $this->getNode(),
                 $baseNode,
                 $this->getFormat(),

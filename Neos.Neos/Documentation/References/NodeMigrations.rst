@@ -23,7 +23,7 @@ The Content Repository comes with a number of common transformations:
 - ``SetDimensions``
 - ``StripTagsOnProperty``
 
-They all implement the ``TYPO3\TYPO3CR\Migration\Transformations\TransformationInterface``. Custom transformations
+They all implement the ``Neos\ContentRepository\Migration\Transformations\TransformationInterface``. Custom transformations
 can be developed against that interface as well, just use the fully qualified class name for those when specifying
 which transformation to use.
 
@@ -43,7 +43,7 @@ comes with a number of filters:
 - ``PropertyNotEmpty``
 - ``Workspace``
 
-They all implement the ``TYPO3\TYPO3CR\Migration\Filters\FilterInterface``. Custom filters can be developed against
+They all implement the ``Neos\ContentRepository\Migration\Filters\FilterInterface``. Custom filters can be developed against
 that interface as well, just use the fully qualified class name for those when specifying which filter to use.
 
 Here is an example of a migration, ``Version20140708120530.yaml``, that operates on nodes in the "live" workspace
@@ -72,7 +72,7 @@ that are marked as removed and applies the ``RemoveNode`` transformation on them
   down:
     comments: 'No down migration available'
 
-Like all migrations the file should be placed in a package inside the ``Migrations/TYPO3CR`` folder where it will be picked
+Like all migrations the file should be placed in a package inside the ``Migrations/ContentRepository`` folder where it will be picked
 up by the CLI tools provided with the content repository:
 
 - ``./flow node:migrationstatus``
@@ -81,6 +81,7 @@ up by the CLI tools provided with the content repository:
 Use ``./flow help <command>`` to get detailed instructions. The ``migrationstatus`` command also prints a short description
 for each migration.
 
+.. note:: Node migrations in ``Migrations/TYPO3CR`` directories are also supported for historic reasons
 
 
 Transformations Reference

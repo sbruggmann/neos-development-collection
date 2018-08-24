@@ -2,10 +2,22 @@
     "name": "neos/nodetypes",
     "type": "neos-package",
     "description": "Node type configuration for Neos",
-    "license": "GPL-3.0+",
+    "license": ["GPL-3.0-or-later"],
     "require": {
         "neos/form": "*",
-        "neos/neos": "*"
+
+        "neos/media": "self.version",
+        "neos/content-repository": "self.version",
+        "neos/neos": "self.version",
+        "neos/fusion": "self.version",
+
+        "neos/nodetypes-basemixins": "self.version",
+        "neos/nodetypes-assetlist": "self.version",
+        "neos/nodetypes-columnlayouts": "self.version",
+        "neos/nodetypes-contentreferences": "self.version",
+        "neos/nodetypes-html": "self.version",
+        "neos/nodetypes-navigation": "self.version",
+        "neos/nodetypes-form": "self.version"
     },
     "replace": {
         "typo3/neos-nodetypes": "self.version"
@@ -74,7 +86,20 @@
             "Neos.NodeTypes-20161125104800",
             "Neos.Neos-20161125104802",
             "Neos.Kickstarter-20161125110814",
-            "Neos.Flow-20161125124112"
+            "Neos.Flow-20161125124112",
+            "Neos.Neos-20161125122412",
+            "TYPO3.FluidAdaptor-20161130112935",
+            "Neos.Fusion-20161201202543",
+            "Neos.Neos-20161201222211",
+            "Neos.Fusion-20161202215034",
+            "Neos.Fusion-20161219092345",
+            "Neos.ContentRepository-20161219093512",
+            "Neos.Media-20161219094126",
+            "Neos.Neos-20161219094403",
+            "Neos.Neos-20161219122512",
+            "Neos.Fusion-20161219130100",
+            "Neos.Neos-20161220163741",
+            "Neos.Fusion-20170120013047"
         ]
     }
 }

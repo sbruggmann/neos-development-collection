@@ -18,6 +18,7 @@ use Neos\Flow\Mvc\Routing\RouterCachingService;
 use Neos\Flow\Package\Package as BasePackage;
 use Neos\Flow\Persistence\Doctrine\PersistenceManager;
 use Neos\Media\Domain\Service\AssetService;
+use Neos\Neos\Controller\Backend\ContentController;
 use Neos\Neos\Domain\Model\Site;
 use Neos\Neos\Domain\Service\SiteImportService;
 use Neos\Neos\Domain\Service\SiteService;
@@ -48,17 +49,17 @@ class Package extends BasePackage
 
         $flushConfigurationCache = function () use ($bootstrap) {
             $cacheManager = $bootstrap->getEarlyInstance(CacheManager::class);
-            $cacheManager->getCache('TYPO3_Neos_Configuration_Version')->flush();
+            $cacheManager->getCache('Neos_Neos_Configuration_Version')->flush();
         };
 
         $flushXliffServiceCache = function () use ($bootstrap) {
             $cacheManager = $bootstrap->getEarlyInstance(CacheManager::class);
-            $cacheManager->getCache('TYPO3_Neos_XliffToJsonTranslations')->flush();
+            $cacheManager->getCache('Neos_Neos_XliffToJsonTranslations')->flush();
         };
 
         $dispatcher->connect(FileMonitor::class, 'filesHaveChanged', function ($fileMonitorIdentifier, array $changedFiles) use ($flushConfigurationCache, $flushXliffServiceCache) {
             switch ($fileMonitorIdentifier) {
-                case 'TYPO3CR_NodeTypesConfiguration':
+                case 'ContentRepository_NodeTypesConfiguration':
                 case 'Flow_ConfigurationFiles':
                     $flushConfigurationCache();
                     break;
@@ -76,7 +77,10 @@ class Package extends BasePackage
         $dispatcher->connect(Node::class, 'nodeRemoved', ContentCacheFlusher::class, 'registerNodeChange');
         $dispatcher->connect(Node::class, 'beforeNodeMove', ContentCacheFlusher::class, 'registerNodeChange');
 
-        $dispatcher->connect(AssetService::class, 'assetResourceReplaced', ContentCacheFlusher::class, 'registerAssetResourceChange');
+        $dispatcher->connect(AssetService::class, 'assetUpdated', ContentCacheFlusher::class, 'registerAssetChange');
+        $dispatcher->connect(AssetService::class, 'assetResourceReplaced', ContentCacheFlusher::class, 'registerAssetChange');
+
+        $dispatcher->connect(ContentController::class, 'assetUploaded', SiteService::class, 'assignUploadedAssetToSiteAssetCollection');
 
         $dispatcher->connect(Node::class, 'nodeAdded', NodeUriPathSegmentGenerator::class, '::setUniqueUriPathSegment');
         $dispatcher->connect(Node::class, 'nodePropertyChanged', Service\ImageVariantGarbageCollector::class, 'removeUnusedImageVariant');
@@ -134,6 +138,7 @@ class Package extends BasePackage
 
         $dispatcher->connect(Workspace::class, 'beforeNodePublishing', ContentRepositoryIntegrationService::class, 'beforeNodePublishing');
         $dispatcher->connect(Workspace::class, 'afterNodePublishing', ContentRepositoryIntegrationService::class, 'afterNodePublishing');
+        $dispatcher->connect(Workspace::class, 'baseWorkspaceChanged', RouteCacheFlusher::class, 'registerBaseWorkspaceChange');
 
         $dispatcher->connect(PersistenceManager::class, 'allObjectsPersisted', ContentRepositoryIntegrationService::class, 'updateEventsAfterPublish');
         $dispatcher->connect(NodeDataRepository::class, 'repositoryObjectsPersisted', ContentRepositoryIntegrationService::class, 'updateEventsAfterPublish');

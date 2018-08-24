@@ -99,7 +99,7 @@ class SiteCommandController extends CommandController
      * This command allows to create a blank site with just a single empty document in the default dimension.
      * The name of the site, the packageKey must be specified.
      *
-     * If no ``nodeType`` option is specified the command will use `Neos.Neos.NodeTypes:Page` as fallback. The node type
+     * If no ``nodeType`` option is specified the command will use `Neos.NodeTypes:Page` as fallback. The node type
      * must already exists and have the superType ``Neos.Neos:Document``.
      *
      * If no ``nodeName` option is specified the command will create a unique node-name from the name of the site.
@@ -109,12 +109,12 @@ class SiteCommandController extends CommandController
      *
      * @param string $name The name of the site
      * @param string $packageKey The site package
-     * @param string $nodeType The node type to use for the site node. (Default = Neos.Neos.NodeTypes:Page)
+     * @param string $nodeType The node type to use for the site node. (Default = Neos.NodeTypes:Page)
      * @param string $nodeName The name of the site node. If no nodeName is given it will be determined from the siteName.
      * @param boolean $inactive The new site is not activated immediately (default = false).
      * @return void
      */
-    public function createCommand($name, $packageKey, $nodeType = 'Neos.Neos.NodeTypes:Page', $nodeName = null, $inactive = false)
+    public function createCommand($name, $packageKey, $nodeType = 'Neos.NodeTypes:Page', $nodeName = null, $inactive = false)
     {
         if ($nodeName === null) {
             $nodeName = $this->nodeService->generateUniqueNodeName(SiteService::SITES_ROOT_PATH, $name);
@@ -273,22 +273,18 @@ class SiteCommandController extends CommandController
      * Remove all content and related data - for now. In the future we need some more sophisticated cleanup.
      *
      * @param string $siteNode Name of a site root node to clear only content of this site.
-     * @param string $siteNodeName This option is deprecated, use --site-node instead
      * @return void
      */
-    public function pruneCommand($siteNode = null, $siteNodeName = null)
+    public function pruneCommand($siteNode = null)
     {
         if ($siteNode !== null) {
-            $siteNodeName = $siteNode;
-        }
-        if ($siteNodeName !== null) {
-            $possibleSite = $this->siteRepository->findOneByNodeName($siteNodeName);
+            $possibleSite = $this->siteRepository->findOneByNodeName($siteNode);
             if ($possibleSite === null) {
                 $this->outputLine('The given site site node did not match an existing site.');
                 $this->quit(1);
             }
             $this->siteService->pruneSite($possibleSite);
-            $this->outputLine('Site with root "' . $siteNodeName . '" has been removed.');
+            $this->outputLine('Site with root "' . $siteNode . '" has been removed.');
         } else {
             $this->siteService->pruneAll();
             $this->outputLine('All sites and content have been removed.');

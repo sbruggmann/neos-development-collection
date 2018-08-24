@@ -261,7 +261,6 @@ define(
 					 */
 					onDragStart: function(node) {
 						var parent = node.tree.options.parent;
-						$('a[title]', parent.$nodeTree).tooltip('hide').tooltip('disable');
 						// the root node should not be draggable
 						if (node.data.key !== parent.get('siteNodeContextPath')) {
 							parent.set('dragInProgress', true);
@@ -276,7 +275,6 @@ define(
 					},
 
 					onDragStop: function(node) {
-						$('a[title]', parent.$nodeTree).tooltip('enable');
 						node.tree.options.parent.set('dragInProgress', false);
 						Mousetrap.unbind('esc');
 					},
@@ -324,7 +322,6 @@ define(
 					 */
 					onDrop: function(node, sourceNode, hitMode, ui, draggable) {
 						var parent = node.tree.options.parent;
-						$('a[title]', parent.$nodeTree).tooltip('destroy');
 						parent.move(sourceNode, node, hitMode === 'over' ? 'into' : hitMode);
 					}
 				},
@@ -358,6 +355,7 @@ define(
 					node.data.tooltip = tooltip;
 					return null;
 				}
+
 			},
 
 			/**
@@ -569,24 +567,29 @@ define(
 					parentNode = activeNode;
 				}
 
-				allowedNodeTypes = this._getAllowedChildNodeTypesForNode(parentNode);
+				allowedChildNodeTypes = this._getAllowedChildNodeTypesForNode(parentNode);
 
 				// Only show node types which inherit from the base node type(s).
 				// If the base node type is prefixed with "!", it is seen as negated.
+				var allowedNodeTypes = [];
+				var disallowedNodeTypes = [];
 				this.get('baseNodeType').split(',').forEach(function(nodeTypeFilter) {
 					nodeTypeFilter = nodeTypeFilter.trim();
-
-					allowedNodeTypes = allowedNodeTypes.filter(function (nodeTypeName) {
-						if (nodeTypeFilter[0] === '!') {
-							return !NodeTypeService.isOfType(nodeTypeName, nodeTypeFilter.substring(1));
-						} else {
-							return NodeTypeService.isOfType(nodeTypeName, nodeTypeFilter);
-						}
-					});
+					var nodeType = nodeTypeFilter[0] === '!' ? nodeTypeFilter.substring(1) : nodeTypeFilter;
+					var nodeTypes = Object.keys(NodeTypeService.getSubNodeTypes(nodeType));
+					nodeTypes.push(nodeType);
+					if (nodeTypeFilter[0] === '!') {
+						disallowedNodeTypes = disallowedNodeTypes.concat(nodeTypes);
+					} else {
+						allowedNodeTypes = allowedNodeTypes.concat(nodeTypes);
+					}
+				});
+				allowedChildNodeTypes = allowedChildNodeTypes.filter(function (nodeTypeName) {
+					return allowedNodeTypes.indexOf(nodeTypeName) !== -1 && disallowedNodeTypes.indexOf(nodeTypeName) === -1;
 				});
 
 				InsertNodePanel.create({
-					allowedNodeTypes: allowedNodeTypes,
+					allowedNodeTypes: allowedChildNodeTypes,
 					_position: position,
 					insertNode: function(nodeType, icon) {
 						that.set('insertNodePanelShown', false);
@@ -855,7 +858,21 @@ define(
 				}
 				var that = this;
 				try {
-					sourceNode.move(targetNode, position === 'into' ? 'over' : position);
+					// If moving within the same document
+					if (document.contains(sourceNode.span)) {
+						sourceNode.move(targetNode, position === 'into' ? 'over' : position);
+					} else {
+						switch (position) {
+							case 'before':
+								sourceNode = targetNode.getParent().addChild(sourceNode.data, targetNode);
+							break;
+							case 'after':
+								sourceNode = targetNode.getParent().addChild(sourceNode.data, targetNode.getNextSibling());
+							break;
+							case 'into':
+								sourceNode = targetNode.addChild(sourceNode.data);
+						}
+					}
 					sourceNode.activate();
 					sourceNode.setLazyNodeStatus(this.statusCodes.loading);
 					NodeEndpoint.move(

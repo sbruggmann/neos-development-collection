@@ -20,7 +20,7 @@ use Neos\Neos\Controller\Exception\NodeNotFoundException;
 use Neos\Neos\Controller\Exception\UnresolvableShortcutException;
 use Neos\Neos\Domain\Model\UserInterfaceMode;
 use Neos\Neos\Domain\Service\NodeShortcutResolver;
-use Neos\Neos\View\TypoScriptView;
+use Neos\Neos\View\FusionView;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 
@@ -52,10 +52,10 @@ class NodeController extends ActionController
     /**
      * @var string
      */
-    protected $defaultViewObjectName = TypoScriptView::class;
+    protected $defaultViewObjectName = FusionView::class;
 
     /**
-     * @var TypoScriptView
+     * @var FusionView
      */
     protected $view;
 
@@ -97,16 +97,9 @@ class NodeController extends ActionController
 
         if ($inBackend) {
             $this->overrideViewVariablesFromInternalArguments();
-
-            /** @var UserInterfaceMode $renderingMode */
-            $renderingMode = $node->getContext()->getCurrentRenderingMode();
             $this->response->setHeader('Cache-Control', 'no-cache');
-            if ($renderingMode !== null) {
-                // Deprecated TypoScript context variable from version 2.0.
-                $this->view->assign('editPreviewMode', $renderingMode->getTypoScriptPath());
-            }
             if (!$this->view->canRenderWithNodeAndPath()) {
-                $this->view->setTypoScriptPath('rawContent');
+                $this->view->setFusionPath('rawContent');
             }
         }
 
@@ -116,7 +109,7 @@ class NodeController extends ActionController
     }
 
     /**
-     * Checks if the optionally given node context path, affected node context path and typoscript path are set
+     * Checks if the optionally given node context path, affected node context path and Fusion path are set
      * and overrides the rendering to use those. Will also add a "X-Neos-AffectedNodePath" header in case the
      * actually affected node is different from the one routing resolved.
      * This is used in out of band rendering for the backend.
@@ -138,8 +131,8 @@ class NodeController extends ActionController
             $this->response->setHeader('X-Neos-AffectedNodePath', $affectedNodeContextPath);
         }
 
-        if (($typoScriptPath = $this->request->getInternalArgument('__typoScriptPath')) !== null) {
-            $this->view->setTypoScriptPath($typoScriptPath);
+        if (($fusionPath = $this->request->getInternalArgument('__fusionPath')) !== null) {
+            $this->view->setFusionPath($fusionPath);
         }
     }
 
@@ -157,6 +150,8 @@ class NodeController extends ActionController
             throw new NodeNotFoundException(sprintf('The shortcut node target of node "%s" could not be resolved', $node->getPath()), 1430218730);
         } elseif (is_string($resolvedNode)) {
             $this->redirectToUri($resolvedNode);
+        } elseif ($resolvedNode instanceof NodeInterface && $resolvedNode === $node) {
+            throw new NodeNotFoundException('The requested node does not exist or isn\'t accessible to the current user', 1502793585229);
         } elseif ($resolvedNode instanceof NodeInterface) {
             $this->redirect('show', null, null, ['node' => $resolvedNode]);
         } else {

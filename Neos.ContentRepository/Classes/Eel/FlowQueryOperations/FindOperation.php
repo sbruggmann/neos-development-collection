@@ -11,12 +11,12 @@ namespace Neos\ContentRepository\Eel\FlowQueryOperations;
  * source code.
  */
 
+use Neos\ContentRepository\Validation\Validator\NodeIdentifierValidator;
 use Neos\Eel\FlowQuery\FizzleParser;
 use Neos\Eel\FlowQuery\FlowQuery;
 use Neos\Eel\FlowQuery\FlowQueryException;
 use Neos\Eel\FlowQuery\Operations\AbstractOperation;
 use Neos\Flow\Annotations as Flow;
-use Neos\Flow\Validation\Validator\UuidValidator;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Repository\NodeDataRepository;
 
@@ -42,15 +42,15 @@ use Neos\ContentRepository\Domain\Repository\NodeDataRepository;
  *
  * Example (node type):
  *
- * 	q(node).find('[instanceof Neos.Neos.NodeTypes:Text]')
+ * 	q(node).find('[instanceof Neos.NodeTypes:Text]')
  *
  * Example (multiple node types):
  *
- * 	q(node).find('[instanceof Neos.Neos.NodeTypes:Text],[instanceof Neos.Neos.NodeTypes:Image]')
+ * 	q(node).find('[instanceof Neos.NodeTypes:Text],[instanceof Neos.NodeTypes:Image]')
  *
  * Example (node type with filter):
  *
- * 	q(node).find('[instanceof Neos.Neos.NodeTypes:Text][text*="Neos"]')
+ * 	q(node).find('[instanceof Neos.NodeTypes:Text][text*="Neos"]')
  *
  */
 class FindOperation extends AbstractOperation
@@ -128,8 +128,8 @@ class FindOperation extends AbstractOperation
                 $filterResults = array();
                 $generatedNodes = false;
                 if (isset($filter['IdentifierFilter'])) {
-                    if (!preg_match(UuidValidator::PATTERN_MATCH_UUID, $filter['IdentifierFilter'])) {
-                        throw new FlowQueryException('find() requires a valid identifier', 1332492263);
+                    if (!preg_match(NodeIdentifierValidator::PATTERN_MATCH_NODE_IDENTIFIER, $filter['IdentifierFilter'])) {
+                        throw new FlowQueryException('find() requires a valid node identifier', 1489921359);
                     }
                     /** @var NodeInterface $contextNode */
                     foreach ($context as $contextNode) {

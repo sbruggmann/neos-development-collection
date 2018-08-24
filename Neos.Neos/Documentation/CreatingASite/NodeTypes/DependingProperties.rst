@@ -3,6 +3,10 @@
 Depending Properties
 ====================
 
+.. note:: This API is outdated and works only in the legacy (Ember) version of the
+   Neos User Interface. For a relevant version of the API see
+   :ref:`dynamic-configuration-processing`.
+
 .. note:: This API is still experimental, we might change details about the handler
    signature and implementation to reduce the amount of exposed internal code. The
    UI code is undergoing major changes right now which also might make adjustments
@@ -42,7 +46,7 @@ with :ref:`custom-editors` for properties. Namespaces can be registered like thi
 
 .. code-block:: yaml
 
-  TYPO3:
+  Neos:
     Neos:
       userInterface:
         requireJsPathMapping:
